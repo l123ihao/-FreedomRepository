@@ -1,0 +1,25 @@
+# 构建产物
+bin/
+obj/
+
+# 发布与下载(体积大,不入库)
+publish/
+downloads/
+
+# ffmpeg 二进制与许可副本(克隆后运行 scripts\fetch-ffmpeg.ps1 获取)
+src/FormatConverter.App/ffmpeg/
+src/FormatConverter.App/ffmpeg-LICENSE.txt
+
+# 本机 NuGet 配置(国内镜像,见 README 构建一节)
+NuGet.Config
+
+# IDE / 系统文件
+.vs/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# 日志与临时文件
+*.log
+fix-hosts.ps1

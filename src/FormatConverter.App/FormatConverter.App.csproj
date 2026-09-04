@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>FormatConverter</AssemblyName>
+    <RootNamespace>FormatConverter.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- WPF 不支持裁剪,保持 false -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ffmpeg 打包进软件(发布时随输出拷贝)。文件尚未下载到位时跳过,避免 MSB3030 -->
+    <Content Include="ffmpeg\ffmpeg.exe" Condition="Exists('ffmpeg\ffmpeg.exe')"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="ffmpeg\ffprobe.exe" Condition="Exists('ffmpeg\ffprobe.exe')"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <!-- ffmpeg GPLv3 许可文本,随发布输出(合规要求) -->
+    <Content Include="ffmpeg-LICENSE.txt" Condition="Exists('ffmpeg-LICENSE.txt')"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <!-- 顶部横幅图与窗口/EXE 图标(由 scripts\make-assets.ps1 从桌面图生成)。
+         作为程序集资源嵌入,避免运行时相对路径解析问题 -->
+    <Resource Include="Assets\banner.jpg" />
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FormatConverter.Core\FormatConverter.Core.csproj" />
+  </ItemGroup>
+
+</Project>

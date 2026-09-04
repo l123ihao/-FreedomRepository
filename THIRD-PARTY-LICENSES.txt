@@ -1,0 +1,57 @@
+万能格式转换器 (FormatConverter) — 第三方组件许可证
+=====================================================
+
+本软件使用了以下第三方组件,各组件版权归其各自所有者所有。
+
+--------------------------------------------------------------------------------
+1. .NET 10 (运行时与 SDK)
+   许可证: MIT
+   https://github.com/dotnet/runtime
+--------------------------------------------------------------------------------
+2. CommunityToolkit.Mvvm 8.4.2
+   用途: MVVM 源生成器 ([ObservableProperty] / [RelayCommand])
+   许可证: MIT
+   https://github.com/CommunityToolkit/dotnet
+--------------------------------------------------------------------------------
+3. DocumentFormat.OpenXml 3.5.1
+   用途: docx 文档读写
+   许可证: MIT
+   https://github.com/dotnet/Open-XML-SDK
+--------------------------------------------------------------------------------
+4. QuestPDF 2026.7.3
+   用途: PDF 生成
+   许可证: QuestPDF Community License(个人/年营收低于 100 万美元的
+           企业可免费使用;超出需购买商业许可)
+   https://www.questpdf.com/license/
+--------------------------------------------------------------------------------
+5. PdfPig 0.1.10
+   用途: PDF 文本提取 (pdf → txt)
+   许可证: Apache-2.0
+   https://github.com/UglyToad/PdfPig
+--------------------------------------------------------------------------------
+6. Markdig 1.3.2
+   用途: Markdown 解析与 HTML 渲染
+   许可证: BSD-2-Clause
+   https://github.com/xoofx/markdig
+--------------------------------------------------------------------------------
+7. SixLabors.ImageSharp 3.1.6
+   用途: 图片格式互转 (png/jpg/webp/bmp/gif/ico)
+   许可证: Six Labors Split License(开源/个人免费;商业使用需授权)
+   https://github.com/SixLabors/ImageSharp
+--------------------------------------------------------------------------------
+8. FFmpeg (gyan.dev release essentials 构建)
+   用途: 音视频转换、媒体探测
+   许可证: GPL v3(FFmpeg 以 --enable-gpl 配置编译)
+   https://www.gyan.dev/ffmpeg/builds/
+   GPL v3 全文: https://www.gnu.org/licenses/gpl-3.0.txt
+
+   FFmpeg 是自由软件:您可以在自由软件基金会发布的 GNU 通用公共许可证
+   (GPL v3)条款下重新分发和/或修改它。FFmpeg 以"有用"为目的分发,
+   但没有任何担保;甚至没有适销性或特定用途适用性的默示担保。
+   本软件通过子进程调用 FFmpeg 可执行文件,FFmpeg 作为独立程序分发,
+   其源代码可通过上述网址获取。
+--------------------------------------------------------------------------------
+9. xunit 2.9.3 / Microsoft.NET.Test.Sdk(仅用于开发测试,不随发布包分发)
+   许可证: Apache-2.0
+   https://github.com/xunit/xunit
+--------------------------------------------------------------------------------

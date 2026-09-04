@@ -1,0 +1,14 @@
+# 文本文件 LF 入库,检出时按系统换行;二进制保持原样
+* text=auto
+*.cs text
+*.xaml text
+*.csproj text
+*.props text
+*.slnx text
+*.ps1 text
+*.md text
+*.yml text
+*.txt text
+*.png binary
+*.jpg binary
+*.ico binary

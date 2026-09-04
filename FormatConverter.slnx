@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FormatConverter.App/FormatConverter.App.csproj" />
+    <Project Path="src/FormatConverter.Core/FormatConverter.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/Tests/">
+    <Project Path="src/Tests/FormatConverter.Core.Tests/FormatConverter.Core.Tests.csproj" />
+  </Folder>
+</Solution>
