@@ -1,5 +1,7 @@
 # 万能格式转换器 (FormatConverter)
 
+[![build](https://github.com/l123ihao/-FreedomRepository/actions/workflows/build.yml/badge.svg)](https://github.com/l123ihao/-FreedomRepository/actions)
+
 Windows 桌面应用:视频 / 音频 / 文档 / 图片格式互转。C# WPF(.NET 10),中文界面,支持拖拽、批量转换与进度显示。FFmpeg 已打包进应用,用户无需自行安装。
 
 ## 功能
