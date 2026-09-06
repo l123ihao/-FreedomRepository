@@ -38,4 +38,7 @@ public sealed class ConversionOptions
     public OverwritePolicy OverwritePolicy { get; init; } = OverwritePolicy.Rename;
 
     public VideoMode VideoMode { get; init; } = VideoMode.CopyFirst;
+
+    /// <summary>视频转码时优先使用硬件编码器(NVENC/QSV/AMF),失败自动回退软件编码。</summary>
+    public bool HardwareAcceleration { get; init; } = true;
 }

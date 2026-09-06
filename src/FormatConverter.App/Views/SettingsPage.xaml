@@ -1,0 +1,67 @@
+<UserControl x:Class="FormatConverter.App.Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="20,16">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+                <TextBlock Text="设置" FontSize="22" FontWeight="Bold"/>
+
+                <!-- 外观 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="外观" FontWeight="SemiBold" FontSize="14"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="主题:" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <ComboBox Style="{StaticResource ModernComboBox}" Width="170" Margin="10,0,0,0"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding ThemeOptions}"
+                                      DisplayMemberPath="Label"
+                                      SelectedItem="{Binding SelectedTheme}"/>
+                        </StackPanel>
+                        <TextBlock Text="切换后立即生效;「跟随系统」会随 Windows 深浅色模式自动变化。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 转换行为 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="转换行为" FontWeight="SemiBold" FontSize="14"/>
+                        <CheckBox Content="拖入格式磁贴时先询问确认" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,12,0,0" IsChecked="{Binding AskBeforeConvert}"/>
+                        <TextBlock Text="关闭后,拖入文件将直接开始转换(仍可随时取消)。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 快捷键 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="快捷键" FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0"
+                                   Text="Ctrl+O 选择文件 · Ctrl+Shift+O 添加文件夹 · Del 移除选中 · Ctrl+K 命令面板 · Ctrl+1..4 切换页面"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 右键菜单集成 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Windows 右键菜单集成" FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock Text="安装后,在资源管理器右键任意文件 →「万能格式转换器」即可直接转成常用格式(输出到原文件夹)。写入 HKCU,无需管理员权限。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                            <Button DockPanel.Dock="Left" Content="安装右键菜单" Style="{StaticResource AccentButton}"
+                                    Padding="14,6" Command="{Binding InstallShellCommand}"/>
+                            <Button DockPanel.Dock="Left" Content="卸载右键菜单" Style="{StaticResource ModernButton}"
+                                    Padding="14,6" Margin="10,0,0,0" Command="{Binding UninstallShellCommand}"/>
+                            <TextBlock DockPanel.Dock="Left" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Text="{Binding ShellStatus}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

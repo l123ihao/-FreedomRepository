@@ -15,13 +15,41 @@ namespace FormatConverter.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly ConversionEngine _engine = new(ConverterFactory.CreateDefault());
+    public const string PageConvert = "convert";
+    public const string PageTools = "tools";
+    public const string PageHistory = "history";
+    public const string PageSettings = "settings";
+
+    public sealed record ThemeOption(string Key, string Label);
+
+    /// <summary>命令面板条目:显示名 + 快捷键提示 + 执行动作。</summary>
+    public sealed record PaletteItem(string Label, string Hint, Action Run);
+
+    private readonly ConversionEngine _engine = new(ConverterFactory.CreateDefault(), smartParallelism: true);
     private readonly HashSet<string> _knownPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly IProgress<ProgressInfo> _progress;
+    private readonly SemaphoreSlim _probeGate = new(2);
     private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _probeCts = new();
+    private int _overwriteWarnings;
 
     public ObservableCollection<FileItemViewModel> Files { get; } = new();
+
+    /// <summary>队列中当前选中的文件(ConvertPage 的 SelectionChanged 同步,Del 移除用)。</summary>
+    public ObservableCollection<FileItemViewModel> SelectedFiles { get; } = new();
+
     public int[] AudioBitrateChoices { get; } = { 128, 192, 320 };
+
+    /// <summary>设置页主题选项(Key 与 AppTheme 枚举名一致)。</summary>
+    public IReadOnlyList<ThemeOption> ThemeOptions { get; } = new[]
+    {
+        new ThemeOption("System", "跟随系统"),
+        new ThemeOption("Light", "浅色"),
+        new ThemeOption("Dark", "深色"),
+    };
+
+    /// <summary>命令面板全部条目(构造函数填充)。</summary>
+    public IReadOnlyList<PaletteItem> PaletteItems { get; }
 
     /// <summary>全量格式按类别分组(视频→音频→文档→图片),供格式磁贴绑定。</summary>
     public IReadOnlyList<FormatGroupViewModel> FormatGroups { get; }
@@ -29,6 +57,19 @@ public partial class MainViewModel : ObservableObject
     /// <summary>全局唯一的目标格式:先选格式,再拖文件。</summary>
     [ObservableProperty]
     private FormatInfo selectedFormat = null!;
+
+    /// <summary>当前页面 key(convert/tools/history/settings),驱动导航切换。</summary>
+    [ObservableProperty]
+    private string currentPageKey = PageConvert;
+
+    public bool IsConvertPage => CurrentPageKey == PageConvert;
+    public bool IsToolsPage => CurrentPageKey == PageTools;
+    public bool IsHistoryPage => CurrentPageKey == PageHistory;
+    public bool IsSettingsPage => CurrentPageKey == PageSettings;
+
+    /// <summary>设置页主题选择;变更即时应用并持久化。</summary>
+    [ObservableProperty]
+    private ThemeOption selectedTheme = null!;
 
     /// <summary>拖放区提示文案,跟随选中格式。</summary>
     [ObservableProperty]
@@ -50,11 +91,24 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool videoCopyFirst = true;
 
+    /// <summary>视频转码优先硬件编码(NVENC/QSV/AMF),失败自动回退软件。</summary>
+    [ObservableProperty]
+    private bool videoHardwareAcceleration = true;
+
     [ObservableProperty]
     private bool isConverting;
 
     [ObservableProperty]
     private double overallProgress;
+
+    /// <summary>任务栏进度(0-1),绑定 TaskbarItemInfo.ProgressValue。</summary>
+    [ObservableProperty]
+    private double taskbarProgress;
+
+    /// <summary>任务栏进度状态:转换中 Normal,否则 None(隐藏)。</summary>
+    [ObservableProperty]
+    private System.Windows.Shell.TaskbarItemProgressState taskbarState =
+        System.Windows.Shell.TaskbarItemProgressState.None;
 
     [ObservableProperty]
     private string statusText = "将文件拖到对应格式磁贴上即可开始转换;或先选格式再点「选择文件」。";
@@ -74,6 +128,25 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool hasFailedFiles;
 
+    // ---------- 命令面板状态 ----------
+
+    [ObservableProperty]
+    private bool commandPaletteVisible;
+
+    [ObservableProperty]
+    private string commandPaletteQuery = "";
+
+    [ObservableProperty]
+    private PaletteItem? selectedPaletteItem;
+
+    /// <summary>按输入过滤后的命令面板条目。</summary>
+    public IEnumerable<PaletteItem> FilteredPaletteItems =>
+        string.IsNullOrWhiteSpace(CommandPaletteQuery)
+            ? PaletteItems
+            : PaletteItems.Where(i =>
+                i.Label.Contains(CommandPaletteQuery, StringComparison.OrdinalIgnoreCase)
+                || i.Hint.Contains(CommandPaletteQuery, StringComparison.OrdinalIgnoreCase));
+
     public MainViewModel()
     {
         // 在 UI 线程创建 Progress<T>:回调自动切回 UI 线程
@@ -84,6 +157,21 @@ public partial class MainViewModel : ObservableObject
         selectedFormat = mp4.Format;
         mp4.SetSelected(true);
         dropHintText = $"将文件拖拽到此处,将直接转换为 {selectedFormat.Extension.ToUpper()}";
+        // 主题:按持久化偏好初始化(ThemeService 已在 App 启动时应用过一次,这里只同步选项)
+        selectedTheme = ThemeOptions.First(o => o.Key == SettingsService.LoadTheme().ToString());
+        RefreshShellStatus();
+        // 命令面板条目(直达各命令)
+        PaletteItems = new[]
+        {
+            new PaletteItem("选择文件", "Ctrl+O", AddFiles),
+            new PaletteItem("添加文件夹", "Ctrl+Shift+O", AddFolder),
+            new PaletteItem("清空列表", "", Clear),
+            new PaletteItem("转换页", "Ctrl+1", () => Navigate(PageConvert)),
+            new PaletteItem("工具页", "Ctrl+2", () => Navigate(PageTools)),
+            new PaletteItem("历史页", "Ctrl+3", () => Navigate(PageHistory)),
+            new PaletteItem("设置页", "Ctrl+4", () => Navigate(PageSettings)),
+            new PaletteItem("关于", "", About),
+        };
     }
 
     /// <summary>按固定顺序(视频/音频/文档/图片)构建格式分组;纯来源格式(如 pptx)不出磁贴。</summary>
@@ -113,6 +201,177 @@ public partial class MainViewModel : ObservableObject
         RefreshTileCounts();
     }
 
+    /// <summary>侧边导航切页。</summary>
+    [RelayCommand]
+    private void Navigate(string page) => CurrentPageKey = page;
+
+    partial void OnCurrentPageKeyChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsConvertPage));
+        OnPropertyChanged(nameof(IsToolsPage));
+        OnPropertyChanged(nameof(IsHistoryPage));
+        OnPropertyChanged(nameof(IsSettingsPage));
+    }
+
+    // ---------- 命令面板 ----------
+
+    [RelayCommand]
+    private void OpenCommandPalette()
+    {
+        CommandPaletteQuery = "";
+        CommandPaletteVisible = true;
+        SelectedPaletteItem = FilteredPaletteItems.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void CloseCommandPalette() => CommandPaletteVisible = false;
+
+    [RelayCommand]
+    private void ExecutePaletteItem(PaletteItem? item)
+    {
+        if (item is null) return;
+        CommandPaletteVisible = false;
+        item.Run();
+    }
+
+    public void SelectNextPaletteItem()
+    {
+        var items = FilteredPaletteItems.ToList();
+        if (items.Count == 0) return;
+        var idx = SelectedPaletteItem is null ? -1 : items.IndexOf(SelectedPaletteItem);
+        SelectedPaletteItem = items[(idx + 1) % items.Count];
+    }
+
+    public void SelectPreviousPaletteItem()
+    {
+        var items = FilteredPaletteItems.ToList();
+        if (items.Count == 0) return;
+        var idx = SelectedPaletteItem is null ? 0 : items.IndexOf(SelectedPaletteItem);
+        SelectedPaletteItem = items[(idx - 1 + items.Count) % items.Count];
+    }
+
+    partial void OnCommandPaletteQueryChanged(string value)
+    {
+        OnPropertyChanged(nameof(FilteredPaletteItems));
+        SelectedPaletteItem = FilteredPaletteItems.FirstOrDefault();
+    }
+
+    // ---------- 移除选中文件(Del) ----------
+
+    private bool CanRemoveSelectedFiles() => !IsConverting && SelectedFiles.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedFiles))]
+    private void RemoveSelectedFiles()
+    {
+        if (IsConverting) return;
+        foreach (var item in SelectedFiles.ToList())
+        {
+            Files.Remove(item);
+            _knownPaths.Remove(item.SourcePath);
+        }
+        SelectedFiles.Clear();
+        RefreshTileCounts();
+        RemoveSelectedFilesCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>由 ConvertPage 的 SelectionChanged 调用,同步选中集合并刷新 Del 可用性。</summary>
+    public void SyncSelectedFiles(IEnumerable<FileItemViewModel> selected)
+    {
+        SelectedFiles.Clear();
+        foreach (var item in selected)
+            SelectedFiles.Add(item);
+        RemoveSelectedFilesCommand.NotifyCanExecuteChanged();
+    }
+
+    // ---------- 行内媒体信息探测 ----------
+
+    /// <summary>入队后异步探测媒体信息(转换中不探测,避免与转换争用 ffprobe)。</summary>
+    private void QueueMediaProbe(FileItemViewModel item)
+    {
+        var cts = _probeCts;
+        if (cts is null) return;
+        _ = ProbeMediaAsync(item, cts.Token);
+    }
+
+    private async Task ProbeMediaAsync(FileItemViewModel item, CancellationToken ct)
+    {
+        try
+        {
+            await _probeGate.WaitAsync(ct);
+            try
+            {
+                var text = await MediaProbeService.ProbeTextAsync(item.SourcePath, item.Category, ct);
+                if (text is not null)
+                    item.MediaInfoText = text;
+            }
+            finally
+            {
+                _probeGate.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            // 探测失败静默,不影响转换主流程
+        }
+    }
+
+    /// <summary>主题选项变更:应用并持久化。</summary>
+    partial void OnSelectedThemeChanged(ThemeOption value)
+    {
+        if (value is null) return;
+        var theme = Enum.Parse<AppTheme>(value.Key);
+        ThemeService.Apply(theme);
+        SettingsService.SaveTheme(theme);
+    }
+
+    // ---------- 右键菜单集成 ----------
+
+    [ObservableProperty]
+    private string shellStatus = "未安装";
+
+    [ObservableProperty]
+    private bool isShellInstalled;
+
+    [RelayCommand]
+    private void InstallShell()
+    {
+        try
+        {
+            ShellIntegration.Install();
+            ShellStatus = "已安装:右键任意文件 → 万能格式转换器。";
+        }
+        catch (Exception ex)
+        {
+            ShellStatus = $"安装失败: {ex.Message}";
+        }
+        RefreshShellStatus();
+    }
+
+    [RelayCommand]
+    private void UninstallShell()
+    {
+        try
+        {
+            ShellIntegration.Uninstall();
+            ShellStatus = "已卸载右键菜单。";
+        }
+        catch (Exception ex)
+        {
+            ShellStatus = $"卸载失败: {ex.Message}";
+        }
+        RefreshShellStatus();
+    }
+
+    private void RefreshShellStatus()
+    {
+        IsShellInstalled = ShellIntegration.IsInstalled;
+        if (!IsShellInstalled && ShellStatus.StartsWith("已安装", StringComparison.Ordinal))
+            ShellStatus = "未安装";
+    }
+
     partial void OnAskBeforeConvertChanged(bool value) => SettingsService.SaveDontAskBeforeConvert(value);
 
     partial void OnIsConvertingChanged(bool value)
@@ -121,6 +380,15 @@ public partial class MainViewModel : ObservableObject
         RetryFailedCommand.NotifyCanExecuteChanged();
         RemoveSelectedCommand.NotifyCanExecuteChanged();
         ClearCommand.NotifyCanExecuteChanged();
+        RemoveSelectedFilesCommand.NotifyCanExecuteChanged();
+        TaskbarState = value
+            ? System.Windows.Shell.TaskbarItemProgressState.Normal
+            : System.Windows.Shell.TaskbarItemProgressState.None;
+    }
+
+    partial void OnOverallProgressChanged(double value)
+    {
+        TaskbarProgress = value / 100.0;
     }
 
     // ---------- 进度 ----------
@@ -160,6 +428,9 @@ public partial class MainViewModel : ObservableObject
         if (IsConverting) return;
         IsConverting = true;
         CurrentSpeed = "";
+        // 转换期间暂停媒体探测,避免与转换争用 ffprobe
+        _probeCts?.Cancel();
+        _probeCts = null;
         var cts = new CancellationTokenSource();
         _cts = cts;
 
@@ -184,6 +455,7 @@ public partial class MainViewModel : ObservableObject
                         AudioBitrateKbps = AudioBitrateKbps,
                         OverwritePolicy = AutoRename ? OverwritePolicy.Rename : OverwritePolicy.Overwrite,
                         VideoMode = VideoCopyFirst ? VideoMode.CopyFirst : VideoMode.AlwaysTranscode,
+                        HardwareAcceleration = VideoHardwareAcceleration,
                     };
                     jobs.Add(new ConversionJob(Guid.NewGuid(), item.SourcePath, outputPath,
                         item.TargetFormat.Extension, options));
@@ -225,6 +497,8 @@ public partial class MainViewModel : ObservableObject
             IsConverting = false;
             cts.Dispose();
             _cts = null;
+            // 转换结束后恢复媒体探测
+            _probeCts ??= new CancellationTokenSource();
         }
 
         RefreshTileCounts();
@@ -240,6 +514,10 @@ public partial class MainViewModel : ObservableObject
         OverallProgress = Files.Count > 0
             ? (double)(ok + fail + cancel) / Files.Count * 100
             : 0;
+
+        // 完成通知(全取消时不打扰)
+        if (ok + fail > 0)
+            NotifyService.Show("转换完成", StatusText);
     }
 
     private bool CanRetryFailed() => !IsConverting && HasFailedFiles;
@@ -340,6 +618,7 @@ public partial class MainViewModel : ObservableObject
         if (IsConverting) return;
         Files.Clear();
         _knownPaths.Clear();
+        _overwriteWarnings = 0;
         OverallProgress = 0;
         StatusText = "将文件拖到对应格式磁贴上即可开始转换;或先选格式再点「选择文件」。";
         CurrentSpeed = "";
@@ -371,10 +650,11 @@ public partial class MainViewModel : ObservableObject
 
     public void AddPaths(IEnumerable<string> paths)
     {
+        _overwriteWarnings = 0;
         foreach (var path in paths)
             AddPath(path);
         if (Files.Count > 0)
-            StatusText = $"已添加 {Files.Count} 个文件。";
+            StatusText = $"已添加 {Files.Count} 个文件。" + OverwriteWarning();
         RefreshTileCounts();
     }
 
@@ -386,6 +666,7 @@ public partial class MainViewModel : ObservableObject
     public async Task<(int Added, int Rejected)> AddPathsToFormatAsync(
         IEnumerable<string> paths, FormatInfo target, bool autoStart)
     {
+        _overwriteWarnings = 0;
         var rejected = new List<string>();
         var before = Files.Count;
         foreach (var path in paths)
@@ -398,7 +679,7 @@ public partial class MainViewModel : ObservableObject
             var rejText = rejected.Count > 0
                 ? $",忽略 {rejected.Count} 个: {string.Join("、", rejected.Take(3))}{(rejected.Count > 3 ? "…" : "")}"
                 : "";
-            StatusText = $"已添加 {added} 个文件(→ {target.Extension.ToUpper()}){rejText}";
+            StatusText = $"已添加 {added} 个文件(→ {target.Extension.ToUpper()}){rejText}" + OverwriteWarning();
             if (autoStart) await RunConversionLoopAsync();
         }
         else
@@ -446,8 +727,20 @@ public partial class MainViewModel : ObservableObject
             var target = targets.Any(t =>
                 string.Equals(t.Extension, SelectedFormat.Extension, StringComparison.OrdinalIgnoreCase))
                 ? SelectedFormat : defaultTarget;
-            Files.Add(new FileItemViewModel(
-                path, info.Name, info.Length, category, target));
+            var item = new FileItemViewModel(
+                path, info.Name, info.Length, category, target);
+            Files.Add(item);
+            QueueMediaProbe(item);
+
+            // 关闭自动重命名时预检:目标已存在将被覆盖,统计并在状态栏提示
+            if (!AutoRename)
+            {
+                var output = OutputPathHelper.Resolve(
+                    path, target.Extension, OutputDirectory, OutputToSourceFolder, AutoRename);
+                if (File.Exists(output) &&
+                    !string.Equals(Path.GetFullPath(output), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+                    _overwriteWarnings++;
+            }
         }
         catch
         {
@@ -498,8 +791,19 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
             var info = new FileInfo(path);
-            Files.Add(new FileItemViewModel(
-                path, info.Name, info.Length, FormatRegistry.GetCategory(ext), target));
+            var item = new FileItemViewModel(
+                path, info.Name, info.Length, FormatRegistry.GetCategory(ext), target);
+            Files.Add(item);
+            QueueMediaProbe(item);
+
+            if (!AutoRename)
+            {
+                var output = OutputPathHelper.Resolve(
+                    path, target.Extension, OutputDirectory, OutputToSourceFolder, AutoRename);
+                if (File.Exists(output) &&
+                    !string.Equals(Path.GetFullPath(output), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+                    _overwriteWarnings++;
+            }
         }
         catch
         {
@@ -507,6 +811,11 @@ public partial class MainViewModel : ObservableObject
             rejected.Add($"{name}(读取失败)");
         }
     }
+
+    private string OverwriteWarning() =>
+        _overwriteWarnings > 0
+            ? $" 注意:{_overwriteWarnings} 个文件的目标已存在,将直接覆盖(可在「高级设置」开启「重名自动加序号」避免覆盖)。"
+            : "";
 
     private static string BuildFilter()
     {

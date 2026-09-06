@@ -22,11 +22,16 @@ public partial class FileItemViewModel : ObservableObject
     [ObservableProperty]
     private string? error;
 
+    /// <summary>异步探测到的媒体信息(时长/分辨率/编码),展示在行内副标题。</summary>
+    [ObservableProperty]
+    private string? mediaInfoText;
+
     public string SourcePath { get; }
     public string Name { get; }
     public string SizeText { get; }
     public string CategoryText { get; }
     public string Emoji { get; }
+    public FileCategory Category { get; }
 
     /// <summary>目标格式简称(大写扩展名),行内小标签展示。</summary>
     public string TargetText => TargetFormat.Extension.ToUpper();
@@ -38,6 +43,7 @@ public partial class FileItemViewModel : ObservableObject
         SourcePath = sourcePath;
         Name = name;
         SizeText = FormatSize(sizeBytes);
+        Category = category;
         CategoryText = category switch
         {
             FileCategory.Video => "视频",

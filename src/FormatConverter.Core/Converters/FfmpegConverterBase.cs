@@ -2,6 +2,7 @@ using System.Diagnostics;
 using FormatConverter.Core.Engine;
 using FormatConverter.Core.Ffmpeg;
 using FormatConverter.Core.Models;
+using FormatConverter.Core.Tools;
 
 namespace FormatConverter.Core.Converters;
 
@@ -30,7 +31,13 @@ public abstract class FfmpegConverterBase : IConverter
             var dir = Path.GetDirectoryName(job.OutputPath)!;
             Directory.CreateDirectory(dir);
             var partPath = FfmpegRunner.BuildPartPath(job.OutputPath);
-            var args = FfmpegArgsBuilder.Build(job.SourcePath, job.TargetExtension, partPath, job.Options, probe);
+
+            var hardwareEncoder = job.Options.HardwareAcceleration
+                ? HardwareDetector.PreferredEncoder
+                : null;
+
+            var args = FfmpegArgsBuilder.Build(
+                job.SourcePath, job.TargetExtension, partPath, job.Options, probe, hardwareEncoder);
 
             var ffmpegProgress = progress is null
                 ? null
@@ -39,8 +46,28 @@ public abstract class FfmpegConverterBase : IConverter
 
             var run = await _runner.RunAsync(args, job.OutputPath, probe?.DurationSeconds, ffmpegProgress, ct);
 
+            // 硬件编码失败 → 自动回退软件编码重试一次
+            if (!run.Success && hardwareEncoder is not null && run.ErrorOutput != "已取消")
+            {
+                var retryPart = FfmpegRunner.BuildPartPath(job.OutputPath);
+                var softwareArgs = FfmpegArgsBuilder.Build(
+                    job.SourcePath, job.TargetExtension, retryPart, job.Options, probe, null);
+                run = await _runner.RunAsync(softwareArgs, job.OutputPath, probe?.DurationSeconds, ffmpegProgress, ct);
+            }
+
             if (run.Success)
+            {
+                try
+                {
+                    OutputValidator.EnsureNonEmpty(run.FinalOutputPath!);
+                }
+                catch (Exception ex)
+                {
+                    TryDelete(run.FinalOutputPath);
+                    return Fail(job, sw, ex.Message);
+                }
                 return new ConversionResult(job, true, run.FinalOutputPath, null, sw.Elapsed);
+            }
 
             return Fail(job, sw, run.ErrorOutput ?? "转换失败");
         }
@@ -55,5 +82,11 @@ public abstract class FfmpegConverterBase : IConverter
     }
 
     private static ConversionResult Fail(ConversionJob job, Stopwatch sw, string error) =>
-        new(job, false, null, error, sw.Elapsed);
+        new(job, false, null, ErrorClassifier.WithCategory(error), sw.Elapsed);
+
+    private static void TryDelete(string? path)
+    {
+        if (path is null) return;
+        try { if (File.Exists(path)) File.Delete(path); } catch { /* 尽力而为 */ }
+    }
 }

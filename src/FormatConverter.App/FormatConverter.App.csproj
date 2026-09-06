@@ -4,10 +4,13 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>FormatConverter</AssemblyName>
     <RootNamespace>FormatConverter.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- WPF 主框架保留 manifest 的 PerMonitorV2 DPI 设置;抑制 WinForms 辅助组件(NotifyIcon)的 WFO0003 提示 -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <!-- WPF 不支持裁剪,保持 false -->
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
@@ -32,6 +35,11 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WPF 与 WinForms 共存时移除 WinForms 全局 using,避免 DragEventArgs/UserControl 等二义性 -->
+    <Using Remove="System.Windows.Forms" />
   </ItemGroup>
 
   <ItemGroup>

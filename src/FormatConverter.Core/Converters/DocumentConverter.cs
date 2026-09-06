@@ -3,6 +3,7 @@ using FormatConverter.Core.Documents;
 using FormatConverter.Core.Markdown;
 using FormatConverter.Core.Models;
 using FormatConverter.Core.Pdf;
+using FormatConverter.Core.Tools;
 
 namespace FormatConverter.Core.Converters;
 
@@ -68,6 +69,7 @@ public sealed class DocumentConverter : IConverter
             }
 
             progress?.Report(new ProgressInfo(100, null, null, null, 0, 0, null));
+            OutputValidator.EnsureNonEmpty(job.OutputPath);
             return new ConversionResult(job, true, job.OutputPath, null, sw.Elapsed);
         }
         catch (OperationCanceledException)
@@ -78,7 +80,7 @@ public sealed class DocumentConverter : IConverter
         catch (Exception ex)
         {
             TryDelete(job.OutputPath);
-            return new ConversionResult(job, false, null, ex.Message, sw.Elapsed);
+            return new ConversionResult(job, false, null, ErrorClassifier.WithCategory(ex.Message), sw.Elapsed);
         }
     }
 

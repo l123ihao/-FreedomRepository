@@ -1,0 +1,499 @@
+<UserControl x:Class="FormatConverter.App.Views.ToolsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:FormatConverter.App.ViewModels">
+    <UserControl.DataContext>
+        <vm:ToolsViewModel/>
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <!-- 右侧工具面板:默认收起,按 SelectedTool.Key 显隐 -->
+        <Style x:Key="ToolPanel" TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="media">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="detect">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="compress">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="resize">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="crop">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="watermark">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="rename">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="pdfmerge">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="pdfsplit">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="trim">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="frames">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="gif">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedTool.Key}" Value="audio">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 左侧工具项 -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="12,9">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20,16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="176"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧工具列表 -->
+        <Border Style="{StaticResource CardStyle}" Padding="8" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="工具" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="10,6,10,8"/>
+                <ListBox ItemsSource="{Binding Tools}" SelectedItem="{Binding SelectedTool}"
+                         BorderThickness="0" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Icon}" Width="24"/>
+                                <TextBlock Text="{Binding Name}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Border>
+
+        <!-- 右侧工具面板 -->
+        <ScrollViewer Grid.Column="1" Margin="14,0,0,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+                <TextBlock Text="工具" FontSize="22" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                <!-- 媒体信息 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="媒体信息" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="查看视频/音频的时长、分辨率、编码与码率(需 ffmpeg)。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <Button Content="选择媒体文件…" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"
+                            Margin="0,12,0,0" Command="{Binding SelectMediaFileCommand}"/>
+                    <TextBox Style="{StaticResource ModernTextBox}" Margin="0,12,0,0" MinHeight="150"
+                             TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True"
+                             Text="{Binding MediaInfoResult, Mode=OneWay}"/>
+                </StackPanel>
+
+                <!-- 格式检测 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="格式检测" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="读取文件头魔数识别真实格式,发现扩展名与内容不符时给出提醒。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <Button Content="选择文件…" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"
+                            Margin="0,12,0,0" Command="{Binding SelectDetectFileCommand}"/>
+                    <TextBox Style="{StaticResource ModernTextBox}" Margin="0,12,0,0" MinHeight="120"
+                             TextWrapping="Wrap" AcceptsReturn="True" IsReadOnly="True"
+                             Text="{Binding DetectResult, Mode=OneWay}"/>
+                </StackPanel>
+
+                <!-- 图片压缩 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="图片压缩" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="输出为 JPG;质量和分辨率上限可选(0 表示不限制)。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择图片…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectImageCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="420"
+                                   Text="{Binding ImageInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="质量:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="64" Margin="6,0,14,0"
+                                 Text="{Binding CompressQuality, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="最大宽:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,14,0"
+                                 Text="{Binding CompressMaxWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="最大高:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,0,0"
+                                 Text="{Binding CompressMaxHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="压缩" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding CompressImageCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ImageStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 图片缩放 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="图片缩放" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="百分比优先;只填宽度或高度则保持比例。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择图片…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectImageCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="420"
+                                   Text="{Binding ImageInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="百分比:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="64" Margin="6,0,14,0"
+                                 Text="{Binding ResizePercent, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="宽:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,14,0"
+                                 Text="{Binding ResizeWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="高:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,0,0"
+                                 Text="{Binding ResizeHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="缩放" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding ResizeImageCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ImageStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 图片裁剪 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="图片裁剪" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="按目标宽高居中裁剪(先缩放覆盖,再裁中间)。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择图片…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectImageCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="420"
+                                   Text="{Binding ImageInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="宽:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,14,0"
+                                 Text="{Binding CropWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="高:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,0,0"
+                                 Text="{Binding CropHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="裁剪" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding CropImageCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding ImageStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 图片水印 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="图片水印" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="文字与图片水印二选一(填了文字优先);五个位置可选。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择图片…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectImageCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="340"
+                                   Text="{Binding ImageInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="文字:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="140" Margin="6,0,14,0"
+                                 Text="{Binding WatermarkText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="字号:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,14,0"
+                                 Text="{Binding WatermarkFontSize, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="透明度:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,14,0"
+                                 Text="{Binding WatermarkOpacity, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="位置:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <ComboBox Style="{StaticResource ModernComboBox}" Width="86" Margin="6,0,0,0"
+                                  ItemsSource="{Binding WatermarkPositions}" DisplayMemberPath="Label"
+                                  SelectedItem="{Binding WatermarkPosition}"/>
+                    </WrapPanel>
+                    <DockPanel Margin="0,10,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择水印图片…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectWatermarkImageCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,14,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="340"
+                                   Text="{Binding WatermarkImagePath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Button Content="加水印" Style="{StaticResource AccentButton}" Padding="16,6"
+                                Command="{Binding WatermarkImageCommand}"/>
+                    </DockPanel>
+                    <TextBlock Text="{Binding ImageStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 批量重命名 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="批量重命名" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="占位符:{n} 序号、{n:3} 定宽序号、{name} 原名、{ext} 扩展名、{date} 日期(yyyyMMdd)。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <WrapPanel Margin="0,12,0,0">
+                        <Button Content="选择文件…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectRenameFilesCommand}"/>
+                        <TextBlock Text="{Binding RenameFiles.Count, StringFormat=已选 {0} 个}" Margin="10,0,0,0"
+                                   VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="模板:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="180" Margin="6,0,14,0"
+                                 Text="{Binding RenameTemplate, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="起始序号:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="60" Margin="6,0,14,0"
+                                 Text="{Binding RenameStartNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="预览" Style="{StaticResource ModernButton}" Padding="14,6"
+                                Command="{Binding PreviewRenameCommand}"/>
+                        <Button Content="执行重命名" Style="{StaticResource AccentButton}" Padding="14,6" Margin="10,0,0,0"
+                                Command="{Binding ApplyRenameCommand}"/>
+                    </WrapPanel>
+                    <ListBox Margin="0,12,0,0" MaxHeight="260" ItemsSource="{Binding RenamePreview}"
+                             BorderThickness="0" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding SourcePath}" TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding NewName}" Margin="12,0,0,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding ConflictReason}" Margin="12,0,0,0"
+                                               Foreground="{DynamicResource DangerBrush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="{Binding RenameStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- PDF 合并 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="PDF 合并" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="按列表顺序把多个 PDF 合并为一个文件。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="添加 PDF 文件…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectPdfFilesCommand}"/>
+                        <Button DockPanel.Dock="Left" Content="合并为…" Style="{StaticResource AccentButton}"
+                                Margin="10,0,0,0" Command="{Binding MergePdfCommand}"/>
+                    </DockPanel>
+                    <ListBox Margin="0,10,0,0" MaxHeight="160" ItemsSource="{Binding PdfInputFiles}"
+                             BorderThickness="0" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="{Binding PdfStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- PDF 拆分 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="PDF 拆分" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="按页码范围(如 1-3,5)拆分,或每 N 页拆一份。输出到原文件同目录的 *_split 文件夹。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择 PDF…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectPdfSplitFileCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="360"
+                                   Text="{Binding PdfInputFiles.Count, StringFormat=已选 {0} 个}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="范围:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="120" Margin="6,0,10,0"
+                                 Text="{Binding PdfRangeText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="按范围拆分" Style="{StaticResource AccentButton}" Padding="12,6"
+                                Command="{Binding SplitPdfByRangesCommand}"/>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="每" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,6,0"
+                                 Text="{Binding PdfSplitEveryN, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="页拆一份" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Button Content="按页数拆分" Style="{StaticResource AccentButton}" Padding="12,6" Margin="10,0,0,0"
+                                Command="{Binding SplitPdfEveryNCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding PdfStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 视频剪辑 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="视频剪辑" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="截取片段(秒),流复制速度快;起止留空表示不限制。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择视频…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectVideoCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="360"
+                                   Text="{Binding VideoInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="开始(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,14,0"
+                                 Text="{Binding TrimStart, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="结束(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="72" Margin="6,0,0,0"
+                                 Text="{Binding TrimEnd, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="剪辑" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding TrimVideoCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding VideoStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 视频抽帧 / 缩略图 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="视频抽帧 / 缩略图" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="按帧率抽帧到 *_frames 目录,或按间隔拼 N×M 缩略图。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择视频…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectVideoCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="360"
+                                   Text="{Binding VideoInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="帧率:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,0,0"
+                                 Text="{Binding ExtractFps, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="抽帧" Style="{StaticResource AccentButton}" Padding="14,6" Margin="10,0,20,0"
+                                Command="{Binding ExtractFramesCommand}"/>
+                        <TextBlock Text="列:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="44" Margin="6,0,10,0"
+                                 Text="{Binding ThumbCols, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="行:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="44" Margin="6,0,10,0"
+                                 Text="{Binding ThumbRows, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="间隔(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,0,0"
+                                 Text="{Binding ThumbInterval, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="缩略图" Style="{StaticResource AccentButton}" Padding="14,6" Margin="10,0,0,0"
+                                Command="{Binding ThumbnailCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding VideoStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 视频转 GIF -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="视频转 GIF" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="可指定宽度、帧率与起止时间(留空 = 从头到尾)。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择视频…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectVideoCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="360"
+                                   Text="{Binding VideoInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="宽度:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="60" Margin="6,0,14,0"
+                                 Text="{Binding GifWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="帧率:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="52" Margin="6,0,14,0"
+                                 Text="{Binding GifFps, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="开始(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="64" Margin="6,0,14,0"
+                                 Text="{Binding GifStart, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="时长(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="64" Margin="6,0,0,0"
+                                 Text="{Binding GifDuration, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Content="转 GIF" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding GifCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding VideoStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <!-- 音频增强 -->
+                <StackPanel Style="{StaticResource ToolPanel}">
+                    <TextBlock Text="音频增强" FontSize="14" FontWeight="SemiBold"/>
+                    <TextBlock Text="音量调节(1.0 = 原音量)与淡入/淡出;视频作为输入时提取其音轨。"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Content="选择音频/视频…" Style="{StaticResource ModernButton}"
+                                Command="{Binding SelectVideoCommand}"/>
+                        <TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="340"
+                                   Text="{Binding VideoInputPath, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock Text="音量:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="56" Margin="6,0,14,0"
+                                 Text="{Binding VolumeValue, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="淡入(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="56" Margin="6,0,14,0"
+                                 Text="{Binding FadeInSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="淡出(秒):" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBox Style="{StaticResource ModernTextBox}" Width="56" Margin="6,0,14,0"
+                                 Text="{Binding FadeOutSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="输出格式:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <ComboBox Style="{StaticResource ModernComboBox}" Width="72" Margin="6,0,0,0"
+                                  ItemsSource="{Binding AudioOutputFormats}"
+                                  SelectedItem="{Binding AudioOutputFormat}"/>
+                        <Button Content="处理" Style="{StaticResource AccentButton}" Padding="16,6" Margin="16,0,0,0"
+                                Command="{Binding AdjustAudioCommand}"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding VideoStatus}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

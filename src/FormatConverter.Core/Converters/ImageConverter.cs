@@ -5,11 +5,13 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Tiff;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using FormatConverter.Core.Images;
 using FormatConverter.Core.Models;
+using FormatConverter.Core.Tools;
 
 namespace FormatConverter.Core.Converters;
 
@@ -17,7 +19,7 @@ namespace FormatConverter.Core.Converters;
 public sealed class ImageConverter : IConverter
 {
     private static readonly HashSet<string> ImageTargets =
-        new(StringComparer.OrdinalIgnoreCase) { "png", "jpg", "jpeg", "webp", "bmp", "gif", "ico" };
+        new(StringComparer.OrdinalIgnoreCase) { "png", "jpg", "jpeg", "webp", "bmp", "gif", "ico", "tiff" };
 
     public bool CanConvert(ConversionJob job) =>
         job.Category == FileCategory.Image && ImageTargets.Contains(job.TargetExtension);
@@ -65,6 +67,8 @@ public sealed class ImageConverter : IConverter
 
                 progress?.Report(new ProgressInfo(100, null, null, null, 0, 0, null));
             }
+
+            OutputValidator.EnsureNonEmpty(job.OutputPath);
             return new ConversionResult(job, true, job.OutputPath, null, sw.Elapsed);
         }
         catch (OperationCanceledException)
@@ -75,7 +79,7 @@ public sealed class ImageConverter : IConverter
         catch (Exception ex)
         {
             TryDelete(job.OutputPath);
-            return new ConversionResult(job, false, null, ex.Message, sw.Elapsed);
+            return new ConversionResult(job, false, null, ErrorClassifier.WithCategory(ex.Message), sw.Elapsed);
         }
     }
 
@@ -97,6 +101,7 @@ public sealed class ImageConverter : IConverter
         "webp" => new WebpEncoder { Quality = 90 },
         "bmp" => new BmpEncoder(),
         "gif" => new GifEncoder(),
+        "tiff" => new TiffEncoder(),
         _ => throw new ArgumentException($"不支持的目标图片格式: {ext}"),
     };
 
