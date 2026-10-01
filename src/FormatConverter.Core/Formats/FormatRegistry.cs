@@ -36,6 +36,9 @@ public static class FormatRegistry
         new FormatInfo("md",   FileCategory.Document, "Markdown"),
         new FormatInfo("html", FileCategory.Document, "HTML 网页"),
         new FormatInfo("pptx", FileCategory.Document, "PPT 演示文稿"),
+        // 老版二进制 Office 格式:需 LibreOffice(soffice)转换,由 LibreOfficeConverter 路由
+        new FormatInfo("doc",  FileCategory.Document, "Word 97-2003 文档"),
+        new FormatInfo("ppt",  FileCategory.Document, "PPT 97-2003 演示文稿"),
         new FormatInfo("png",  FileCategory.Image,    "PNG 图片"),
         new FormatInfo("jpg",  FileCategory.Image,    "JPG 图片"),
         new FormatInfo("webp", FileCategory.Image,    "WebP 图片"),
@@ -80,9 +83,13 @@ public static class FormatRegistry
         ["docx"] = ["pdf", "txt", "md", "html"],
         ["txt"]  = ["docx", "pdf"],
         ["md"]   = ["docx", "html", "pdf"],
-        ["pdf"]  = ["txt"],
-        // 仅作来源:标题→Word 标题、正文逐段提取。旧版 .ppt(97-2003 二进制)不支持。
+        // pdf→docx/html 为文本模式(纯文字,无排版还原)
+        ["pdf"]  = ["txt", "docx", "html"],
+        // 仅作来源:标题→Word 标题、正文逐段提取。
         ["pptx"] = ["docx", "txt", "pdf"],
+        // 老版二进制(97-2003):走 LibreOffice;未安装时转换报带指引的友好错误
+        ["doc"] = ["docx", "pdf", "txt", "html"],
+        ["ppt"] = ["pptx", "pdf", "txt"],
 
         ["png"]  = ["jpg", "webp", "bmp", "gif", "ico", "tiff"],
         ["jpg"]  = ["png", "webp", "bmp", "gif", "ico", "tiff"],

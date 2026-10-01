@@ -19,6 +19,7 @@ public class FormatDetectorTests
     [InlineData(new byte[] { 0x66, 0x4C, 0x61, 0x43 }, "flac")]
     [InlineData(new byte[] { 0x49, 0x44, 0x33, 0x04 }, "mp3")]
     [InlineData(new byte[] { 0xFF, 0xFB, 0x90, 0x00 }, "mp3")]
+    [InlineData(new byte[] { 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1 }, "ole")]
     public void Detect_Returns_Known_Format(byte[] header, string expected)
     {
         Assert.Equal(expected, FormatDetector.Detect(header));

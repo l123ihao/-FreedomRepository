@@ -13,15 +13,15 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <!-- 侧边导航项:选中 = 浅蓝底 + 主色文字 -->
         <Style x:Key="NavRadio" TargetType="RadioButton">
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="0,1"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="12,0">
+                        <Border x:Name="bd" Background="Transparent" CornerRadius="8" Padding="10,0">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -53,7 +53,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="204"/>
+            <ColumnDefinition Width="148"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -61,23 +61,22 @@
         <Border Grid.Column="0" Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Margin="20,22,16,20">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource AccentBrush}"
-                                Margin="0,0,10,0">
-                            <TextBlock Text="🔄" FontSize="14" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="万能格式转换器" FontWeight="Bold" FontSize="14"/>
-                            <TextBlock Text="FormatConverter" FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="16,18,12,14">
+                    <Border Width="22" Height="22" CornerRadius="6" Background="{DynamicResource AccentBrush}"
+                            Margin="0,0,8,0">
+                        <TextBlock Text="🔄" FontSize="11" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="万能格式转换器" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <TextBlock DockPanel.Dock="Bottom" Text="快捷键 Ctrl+K" FontSize="11"
-                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="20,0,0,16"/>
+                <StackPanel DockPanel.Dock="Bottom" Margin="16,0,12,12">
+                    <Button Content="关于" Style="{StaticResource ModernButton}" Padding="8,3"
+                            FontSize="12" HorizontalAlignment="Left"
+                            Command="{Binding AboutCommand}"/>
+                    <TextBlock Text="Ctrl+K 命令面板" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,0"/>
+                </StackPanel>
 
                 <StackPanel Margin="8,0">
                     <RadioButton Style="{StaticResource NavRadio}" GroupName="nav" Content="🔄  转换"

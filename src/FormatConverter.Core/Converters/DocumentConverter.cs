@@ -27,9 +27,26 @@ public sealed class DocumentConverter : IConverter
             var dir = Path.GetDirectoryName(job.OutputPath)!;
             Directory.CreateDirectory(dir);
 
-            if (src == "pdf" && dst == "txt")
+            if (src == "pdf")
             {
-                await Task.Run(() => PdfToTxtConverter.Convert(job.SourcePath, job.OutputPath), ct);
+                // pdf 源:PdfPig 提取文字 → txt 直接写出;docx/html 走文本模型渲染(纯文字,无排版)
+                var pdfText = await Task.Run(() => PdfToTxtConverter.ExtractText(job.SourcePath), ct);
+                switch (dst)
+                {
+                    case "txt":
+                        TextFile.WriteAllText(job.OutputPath, pdfText);
+                        break;
+                    case "docx":
+                        DocxWriter.Write(TextToModel.Convert(pdfText), job.OutputPath);
+                        break;
+                    case "html":
+                        TextFile.WriteAllText(job.OutputPath,
+                            ModelToHtml.Convert(TextToModel.Convert(pdfText),
+                                Path.GetFileNameWithoutExtension(job.SourcePath)));
+                        break;
+                    default:
+                        throw new NotSupportedException($"不支持的目标文档格式: {dst}");
+                }
             }
             else
             {

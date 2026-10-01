@@ -1,28 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using FormatConverter.Core.Formats;
-using FormatConverter.Core.Models;
 
 namespace FormatConverter.App.ViewModels;
-
-/// <summary>格式选择区的一行:类别标签 + 该类全部格式磁贴。</summary>
-public sealed class FormatGroupViewModel
-{
-    public string Label { get; }
-    public IReadOnlyList<FormatTileViewModel> Tiles { get; }
-
-    public FormatGroupViewModel(FileCategory category, IEnumerable<FormatInfo> formats, Action<FormatInfo> select)
-    {
-        Label = category switch
-        {
-            FileCategory.Video => "视频",
-            FileCategory.Audio => "音频",
-            FileCategory.Document => "文档",
-            FileCategory.Image => "图片",
-            _ => "",
-        };
-        Tiles = formats.Select(f => new FormatTileViewModel(f, select)).ToList();
-    }
-}
 
 /// <summary>
 /// 单个格式磁贴:IsSelected 由外部(全局选中格式)驱动;

@@ -46,6 +46,43 @@ public class FfmpegArgsBuilderTests
     }
 
     [Fact]
+    public void Custom_Args_Inserted_Before_Muxer()
+    {
+        var opts = new ConversionOptions { CustomFfmpegArgs = "-vf scale=640:-1 -r 30" };
+        var args = FfmpegArgsBuilder.Build("in.mp4", "mp4", "out.part", opts, null);
+        var idxCustom = IndexOf(args, "-vf");
+        var idxF = IndexOf(args, "-f");
+        Assert.True(idxCustom >= 0, "自定义参数应出现在参数列表中");
+        Assert.True(idxF > idxCustom, "自定义参数必须插在 -f <muxer> 之前");
+        Assert.Equal("out.part", args[^1]);
+    }
+
+    [Fact]
+    public void Custom_Args_Quote_Splitting_And_Placeholder_Replacement()
+    {
+        var tokens = FfmpegArgsBuilder.SplitCustomArgs(
+            "-vf \"subtitles={input}\" -metadata title={output}", "in.mp4", "out.part");
+        Assert.Equal(["-vf", "subtitles=in.mp4", "-metadata", "title=out.part"], tokens);
+    }
+
+    [Fact]
+    public void Empty_Custom_Args_Are_Ignored()
+    {
+        var withEmpty = FfmpegArgsBuilder.Build("in.mp4", "mp4", "out.part",
+            new ConversionOptions { CustomFfmpegArgs = "   " }, null);
+        var without = FfmpegArgsBuilder.Build("in.mp4", "mp4", "out.part", new ConversionOptions(), null);
+        Assert.Equal(without, withEmpty);
+    }
+
+    [Fact]
+    public void Custom_Args_Tokens_Containing_Spaces_Kept_Whole()
+    {
+        var tokens = FfmpegArgsBuilder.SplitCustomArgs(
+            "\"C:\\路径 含空格\\filter.txt\" -y", "in.mp4", "out.part");
+        Assert.Equal(["C:\\路径 含空格\\filter.txt", "-y"], tokens);
+    }
+
+    [Fact]
     public void M4a_Target_Uses_Ipod_Muxer()
     {
         var args = FfmpegArgsBuilder.Build("in.mp3", "m4a", "out.part", Opts, null);

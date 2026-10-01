@@ -13,6 +13,7 @@ public sealed class ConverterFactory
         new FfmpegVideoConverter(),
         new FfmpegAudioConverter(),
         new ImageConverter(),
+        new LibreOfficeConverter(), // doc/ppt 老版二进制(在 DocumentConverter 之前路由)
         new DocumentConverter());
 
     public IConverter? GetConverter(ConversionJob job) =>

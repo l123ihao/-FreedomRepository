@@ -35,6 +35,172 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 转换默认值 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="转换默认值" FontWeight="SemiBold" FontSize="14"/>
+                        <DockPanel Margin="0,12,0,0" LastChildFill="True">
+                            <TextBlock DockPanel.Dock="Left" Text="输出目录:" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <Button DockPanel.Dock="Right" Content="浏览…" Style="{StaticResource ModernButton}"
+                                    Padding="12,4" Margin="10,0,0,0"
+                                    Command="{Binding ChooseOutputDirectoryCommand}"/>
+                            <TextBox Margin="10,0,0,0" VerticalAlignment="Center" Style="{StaticResource ModernTextBox}"
+                                     Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DockPanel>
+                        <CheckBox Content="输出到原文件夹" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,12,0,0" IsChecked="{Binding OutputToSourceFolder}"/>
+                        <CheckBox Content="重名自动加序号" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,10,0,0" IsChecked="{Binding AutoRename}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="音频码率:" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <ComboBox Style="{StaticResource ModernComboBox}" Width="120" Margin="10,0,0,0"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding AudioBitrateChoices}"
+                                      SelectedItem="{Binding AudioBitrateKbps}"/>
+                            <TextBlock Text="kbps" VerticalAlignment="Center" Margin="6,0,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                        <CheckBox Content="视频优先无损复制(秒级)" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,12,0,0" IsChecked="{Binding VideoCopyFirst}"/>
+                        <CheckBox Content="视频转码启用硬件加速(NVENC/QSV/AMF,失败自动回退软件)"
+                                  Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,10,0,0" IsChecked="{Binding VideoHardwareAcceleration}"/>
+                        <TextBlock Text="与转换页右侧的高级设置实时同步,修改后自动保存。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 转换完成 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="转换完成" FontWeight="SemiBold" FontSize="14"/>
+                        <CheckBox Content="全部成功后自动退出程序" Style="{StaticResource ModernCheckBox}"
+                                  Margin="0,12,0,0" IsChecked="{Binding ExitAfterConversions}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock Text="退出倒计时:" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <ComboBox Style="{StaticResource ModernComboBox}" Width="120" Margin="10,0,0,0"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding ExitDelayChoices}"
+                                      SelectedItem="{Binding ExitDelaySeconds}"/>
+                            <TextBlock Text="秒" VerticalAlignment="Center" Margin="6,0,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                        <TextBlock Text="倒计时期间拖入新文件或点击重试会取消退出;命令行/右键转换不受影响。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 预设管理 -->
+                <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="预设" FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock Text="预设 = 目标格式 + 参数覆盖 + 输出文件名模板 + 转换后动作;在转换页顶部点选,安装右键菜单后也可从资源管理器直达。内置预设可删除、不可编辑。"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,10,0,0" TextWrapping="Wrap"/>
+                        <ListView x:Name="PresetList" ItemsSource="{Binding PresetsVm.Items}"
+                                  SelectedItem="{Binding PresetsVm.SelectedItem, Mode=TwoWay}"
+                                  Background="Transparent" BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  MaxHeight="280" Margin="0,12,0,0">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Margin" Value="0,0,0,6"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListViewItem">
+                                                <Border x:Name="bd" Background="{DynamicResource ItemBrush}"
+                                                        BorderBrush="Transparent" BorderThickness="1.5"
+                                                        CornerRadius="8" Padding="12,8" SnapsToDevicePixels="True">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <Border Background="{DynamicResource AccentLightBrush}" CornerRadius="4"
+                                                        Padding="5,1" Margin="8,0,0,0">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsBuiltIn}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="内置" FontSize="10"
+                                                               Foreground="{DynamicResource AccentBrush}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding TargetText}" FontSize="12" Margin="8,1,0,0"
+                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Summary}" FontSize="12" Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="✓" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="Bold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="新建预设" Style="{StaticResource AccentButton}" Padding="12,6"
+                                    Command="{Binding PresetsVm.NewPresetCommand}"/>
+                            <Button Content="编辑" Style="{StaticResource ModernButton}" Padding="12,6" Margin="10,0,0,0"
+                                    Command="{Binding PresetsVm.EditPresetCommand}"
+                                    CommandParameter="{Binding PresetsVm.SelectedItem}"/>
+                            <Button Content="删除" Style="{StaticResource ModernButton}" Padding="12,6" Margin="10,0,0,0"
+                                    Command="{Binding PresetsVm.DeletePresetCommand}"
+                                    CommandParameter="{Binding PresetsVm.SelectedItem}"/>
+                            <Button Content="上移" Style="{StaticResource ModernButton}" Padding="12,6" Margin="10,0,0,0"
+                                    Command="{Binding PresetsVm.MoveUpCommand}"
+                                    CommandParameter="{Binding PresetsVm.SelectedItem}"/>
+                            <Button Content="下移" Style="{StaticResource ModernButton}" Padding="12,6" Margin="10,0,0,0"
+                                    Command="{Binding PresetsVm.MoveDownCommand}"
+                                    CommandParameter="{Binding PresetsVm.SelectedItem}"/>
+                            <Button Content="恢复默认顺序" Style="{StaticResource ModernButton}" Padding="12,6" Margin="10,0,0,0"
+                                    Command="{Binding PresetsVm.ResetOrderCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- 快捷键 -->
                 <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
                     <StackPanel>
@@ -48,7 +214,7 @@
                 <Border Style="{StaticResource CardStyle}" Padding="18,16" Margin="0,14,0,0">
                     <StackPanel>
                         <TextBlock Text="Windows 右键菜单集成" FontWeight="SemiBold" FontSize="14"/>
-                        <TextBlock Text="安装后,在资源管理器右键任意文件 →「万能格式转换器」即可直接转成常用格式(输出到原文件夹)。写入 HKCU,无需管理员权限。"
+                        <TextBlock Text="安装后,在资源管理器右键任意文件 →「万能格式转换器」即可直接转成常用格式或你的预设(输出目录与参数跟随「转换默认值」设置)。写入 HKCU,无需管理员权限。"
                                    FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap"/>
                         <DockPanel Margin="0,12,0,0" LastChildFill="False">
                             <Button DockPanel.Dock="Left" Content="安装右键菜单" Style="{StaticResource AccentButton}"

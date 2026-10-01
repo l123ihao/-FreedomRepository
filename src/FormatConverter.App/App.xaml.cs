@@ -10,8 +10,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // 命令行静默转换:--convert <target> <files...>(右键菜单调用,不显示主窗口)
-        if (e.Args.Length > 0 && e.Args[0].Equals("--convert", StringComparison.OrdinalIgnoreCase))
+        // 命令行静默转换:--convert <扩展名|预设名> / --preset <预设名|Id>(右键菜单调用,不显示主窗口)
+        if (e.Args.Length > 0 && (e.Args[0].Equals("--convert", StringComparison.OrdinalIgnoreCase)
+            || e.Args[0].Equals("--preset", StringComparison.OrdinalIgnoreCase)))
         {
             RunCommandLineAsync(e.Args);
             return;
@@ -42,7 +43,8 @@ public partial class App : Application
 
         try
         {
-            var exitCode = await CommandLineConverter.RunAsync(args[1], args.Skip(2).ToArray());
+            var presetOnly = args[0].Equals("--preset", StringComparison.OrdinalIgnoreCase);
+            var exitCode = await CommandLineConverter.RunAsync(args[1], args.Skip(2).ToArray(), presetOnly);
             Shutdown(exitCode);
         }
         catch (Exception ex)

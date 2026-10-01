@@ -29,6 +29,12 @@
     <SolidColorBrush x:Key="WarnBrush" Color="#D9A34A"/>
     <SolidColorBrush x:Key="NeutralBrush" Color="#9AA3B2"/>
 
+    <!-- 格式类别色(磁贴色点) -->
+    <SolidColorBrush x:Key="FormatVideoBrush" Color="#60A5FA"/>
+    <SolidColorBrush x:Key="FormatAudioBrush" Color="#A78BFA"/>
+    <SolidColorBrush x:Key="FormatDocumentBrush" Color="#FBBF24"/>
+    <SolidColorBrush x:Key="FormatImageBrush" Color="#34D399"/>
+
     <!-- 进度条/滚动条/下拉 -->
     <SolidColorBrush x:Key="ProgressTrackBrush" Color="#3A3A3A"/>
     <SolidColorBrush x:Key="ScrollbarThumbBrush" Color="#4A4A4A"/>

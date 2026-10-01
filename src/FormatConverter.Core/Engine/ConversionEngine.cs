@@ -119,6 +119,19 @@ public sealed class ConversionEngine
                 ? new ConversionResult(job, false, null,
                     $"不支持将 {job.Category} 转换为 {job.TargetExtension}", TimeSpan.Zero)
                 : await converter.ConvertAsync(job, local, innerCt);
+
+            // 转换后动作(删除原文件/移入归档):仅成功时执行;动作失败不影响转换结果状态
+            if (results[i].Success && job.PostConversionAction != PostConversionAction.None)
+            {
+                var outcome = PostConversionActions.Apply(results[i], job.ArchiveFolder);
+                results[i] = results[i] with
+                {
+                    OutputPath = outcome.Success && outcome.NewOutputPath is not null
+                        ? outcome.NewOutputPath
+                        : results[i].OutputPath,
+                    PostAction = outcome,
+                };
+            }
         });
     }
 }

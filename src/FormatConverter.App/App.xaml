@@ -129,16 +129,16 @@
 
             <!-- 格式磁贴(同时是投放区):单选,选中 = 蓝底白字;悬停拖放 = 蓝边;拒绝 = 红边 -->
             <Style x:Key="FormatTile" TargetType="ToggleButton">
-                <Setter Property="Height" Value="40"/>
-                <Setter Property="MinWidth" Value="78"/>
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="MinWidth" Value="56"/>
                 <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontSize" Value="12"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Margin" Value="0,0,8,8"/>
+                <Setter Property="Margin" Value="0,0,5,5"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ToggleButton">
@@ -188,38 +188,53 @@
                 </Setter>
             </Style>
 
-            <!-- 横幅上的按钮:白字透明底 -->
-            <Style x:Key="BannerButton" TargetType="Button">
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="#66FFFFFF"/>
+            <!-- 预设条:矮版磁贴 -->
+            <Style x:Key="PresetChip" TargetType="ToggleButton">
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="MinWidth" Value="48"/>
+                <Setter Property="Padding" Value="8,0"/>
+                <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="Padding" Value="14,6"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                <Setter Property="FontSize" Value="12"/>
                 <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Margin" Value="0,0,6,6"/>
                 <Setter Property="Template">
                     <Setter.Value>
-                        <ControlTemplate TargetType="Button">
+                        <ControlTemplate TargetType="ToggleButton">
                             <Border x:Name="bd" Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6" SnapsToDevicePixels="True">
+                                    CornerRadius="7" SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                  Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"/>
+                                                  Margin="{TemplateBinding Padding}"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="bd" Property="Background" Value="#33FFFFFF"/>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource TileHoverBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                 </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="bd" Property="Background" Value="#55FFFFFF"/>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
                                 </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                        <Condition Property="IsMouseOver" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                </MultiTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>
 
+            <!-- 横幅上的按钮:白字透明底 -->
             <!-- 行内小 ✕ 移除按钮 -->
             <Style x:Key="RemoveButton" TargetType="Button">
                 <Setter Property="Width" Value="26"/>

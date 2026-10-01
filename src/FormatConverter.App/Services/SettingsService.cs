@@ -1,50 +1,51 @@
 using System.IO;
 using System.Text.Json;
+using FormatConverter.Core.Models;
 
 namespace FormatConverter.App.Services;
 
-/// <summary>应用设置持久化:%APPDATA%\FormatConverter\settings.json。缺失或损坏时回默认值。</summary>
+/// <summary>
+/// 应用设置持久化:%APPDATA%\FormatConverter\settings.json(缺失/损坏回默认值)。
+/// 数据模型与清洗逻辑在 Core 的 AppSettingsData;这里只负责文件 IO 与主题映射。
+/// </summary>
 public static class SettingsService
 {
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "FormatConverter", "settings.json");
 
-    private sealed record Settings(bool DontAskBeforeConvert, string? Theme);
-
-    private static Settings Load()
+    /// <summary>读取设置;旧版(仅 2 字段)JSON 由同名字段天然迁移,缺失字段回默认。</summary>
+    public static AppSettingsData Load()
     {
         try
         {
-            if (!File.Exists(SettingsPath)) return new Settings(false, null);
-            return JsonSerializer.Deserialize<Settings>(File.ReadAllText(SettingsPath))
-                   ?? new Settings(false, null);
+            if (!File.Exists(SettingsPath)) return AppSettingsData.Defaults();
+            var data = JsonSerializer.Deserialize<AppSettingsData>(
+                           File.ReadAllText(SettingsPath), AppSettingsData.JsonOptions)
+                       ?? AppSettingsData.Defaults();
+            data.Sanitize();
+            return data;
         }
         catch
         {
-            return new Settings(false, null);
+            return AppSettingsData.Defaults();
         }
     }
 
-    private static void Save(Settings settings)
+    /// <summary>保存设置(先清洗);写入失败不影响主流程。</summary>
+    public static void Save(AppSettingsData data)
     {
         try
         {
+            data.Sanitize();
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-            File.WriteAllText(SettingsPath,
-                JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(data, AppSettingsData.JsonOptions));
         }
         catch
         {
             // 设置写入失败不影响主流程
         }
     }
-
-    /// <summary>读取「不再询问拖入转换确认」;默认 false。</summary>
-    public static bool LoadDontAskBeforeConvert() => Load().DontAskBeforeConvert;
-
-    public static void SaveDontAskBeforeConvert(bool value) =>
-        Save(Load() with { DontAskBeforeConvert = value });
 
     /// <summary>读取主题偏好;默认跟随系统。</summary>
     public static AppTheme LoadTheme()
@@ -54,7 +55,4 @@ public static class SettingsService
             ? theme
             : AppTheme.System;
     }
-
-    public static void SaveTheme(AppTheme theme) =>
-        Save(Load() with { Theme = theme.ToString() });
 }

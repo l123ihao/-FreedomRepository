@@ -37,6 +37,37 @@ public partial class ConvertPage : UserControl
         e.Handled = true;
     }
 
+    // ---------- 预设 chip 投放区(拖入 = 自动选中该预设并按预设目标转换) ----------
+
+    private async void OnPresetChipDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        if ((sender as FrameworkElement)?.DataContext is not PresetItemViewModel item) return;
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] paths || paths.Length == 0) return;
+
+        FormatInfo target;
+        if (item.Preset is null)
+        {
+            target = Vm.SelectedFormat; // 「无预设」chip:兜底到当前选中格式
+        }
+        else
+        {
+            item.IsSelected = true; // 触发预设激活:联动磁贴 + 填充高级设置
+            var format = FormatRegistry.Find(item.Preset.TargetExtension);
+            if (format is null) return;
+            target = format;
+        }
+        await DropOntoFormat(target, paths, tile: null);
+    }
+
+    private void OnPresetChipDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     // ---------- 磁贴投放区 ----------
 
     private void OnTileDragEnter(object sender, DragEventArgs e)
@@ -126,7 +157,7 @@ public partial class ConvertPage : UserControl
     private void OnFlashTick(object? sender, EventArgs e)
     {
         _flashTimer.Stop();
-        foreach (var t in Vm.FormatGroups.SelectMany(g => g.Tiles))
+        foreach (var t in Vm.FormatTiles)
             t.IsRejected = false;
     }
 

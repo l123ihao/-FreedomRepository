@@ -40,6 +40,8 @@ public static class FormatDetector
         if (h.Length >= 4 && h[0] == (byte)'P' && h[1] == (byte)'K'
             && (h[2] == 0x03 || h[2] == 0x05 || h[2] == 0x07) && h[3] == 0x04)
             return "zip";                                                    // PK\x03\x04 等(docx/pptx/xlsx/zip 容器)
+        if (StartsWith(h, 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))
+            return "ole";                                                    // OLE2 复合文档(老版 .doc/.ppt/.xls)
 
         // ---- 媒体 ----
         if (StartsWith(h, 0x1A, 0x45, 0xDF, 0xA3)) return "mkv";              // EBML(mkv/webm)
@@ -62,7 +64,7 @@ public static class FormatDetector
     public static readonly HashSet<string> KnownFormats = new(StringComparer.OrdinalIgnoreCase)
     {
         "png", "jpg", "jpeg", "gif", "bmp", "ico", "webp",
-        "pdf", "zip", "docx", "pptx", "xlsx",
+        "pdf", "zip", "docx", "pptx", "xlsx", "doc", "ppt",
         "mkv", "webm", "mp4", "mov", "avi", "wav", "mp3", "flac", "ogg",
     };
 

@@ -31,10 +31,22 @@ public class FormatRegistryTests
     }
 
     [Fact]
-    public void Pdf_Only_Converts_To_Txt()
+    public void Legacy_Doc_And_Ppt_Convert_Via_LibreOffice_Targets()
+    {
+        Assert.Equal(new[] { "docx", "pdf", "txt", "html" },
+            FormatRegistry.GetTargets("doc").Select(f => f.Extension));
+        Assert.Equal(new[] { "pptx", "pdf", "txt" },
+            FormatRegistry.GetTargets("ppt").Select(f => f.Extension));
+        Assert.False(FormatRegistry.IsTargetFormat("doc"));
+        Assert.False(FormatRegistry.IsTargetFormat("ppt"));
+        Assert.True(FormatRegistry.IsTargetFormat("pptx")); // ppt→pptx 让 pptx 成为目标格式
+    }
+
+    [Fact]
+    public void Pdf_Converts_To_Txt_Docx_Html()
     {
         var targets = FormatRegistry.GetTargets("pdf").Select(f => f.Extension).ToArray();
-        Assert.Equal(new[] { "txt" }, targets);
+        Assert.Equal(new[] { "txt", "docx", "html" }, targets);
     }
 
     [Fact]

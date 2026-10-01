@@ -1,3 +1,5 @@
+using FormatConverter.Core.Engine;
+
 namespace FormatConverter.Core.Models;
 
 /// <summary>单个文件的转换结果。</summary>
@@ -6,4 +8,6 @@ public sealed record ConversionResult(
     bool Success,
     string? OutputPath,
     string? ErrorMessage,
-    TimeSpan Elapsed);
+    TimeSpan Elapsed,
+    PostActionOutcome? PostAction = null,
+    string? Note = null);

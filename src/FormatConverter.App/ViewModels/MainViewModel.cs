@@ -6,10 +6,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FormatConverter.App.Services;
 using FormatConverter.Core.Converters;
+using FormatConverter.Core.Documents;
 using FormatConverter.Core.Engine;
 using FormatConverter.Core.Ffmpeg;
 using FormatConverter.Core.Formats;
 using FormatConverter.Core.Models;
+using FormatConverter.Core.Tools;
 
 namespace FormatConverter.App.ViewModels;
 
@@ -33,6 +35,12 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _probeCts = new();
     private int _overwriteWarnings;
 
+    /// <summary>应用设置(构造时加载一次;设置类属性变更时回写)。注意:必须先于下方各设置属性声明。</summary>
+    private readonly AppSettingsData _settings = SettingsService.Load();
+
+    private System.Windows.Threading.DispatcherTimer? _exitTimer;
+    private int _exitCountdown;
+
     public ObservableCollection<FileItemViewModel> Files { get; } = new();
 
     /// <summary>队列中当前选中的文件(ConvertPage 的 SelectionChanged 同步,Del 移除用)。</summary>
@@ -51,12 +59,18 @@ public partial class MainViewModel : ObservableObject
     /// <summary>命令面板全部条目(构造函数填充)。</summary>
     public IReadOnlyList<PaletteItem> PaletteItems { get; }
 
-    /// <summary>全量格式按类别分组(视频→音频→文档→图片),供格式磁贴绑定。</summary>
-    public IReadOnlyList<FormatGroupViewModel> FormatGroups { get; }
+    /// <summary>全量目标格式磁贴(按类别顺序平铺:视频→音频→文档→图片)。</summary>
+    public IReadOnlyList<FormatTileViewModel> FormatTiles { get; }
+
+    /// <summary>预设管理(转换页预设条 + 设置页预设卡片共用)。</summary>
+    public PresetsViewModel PresetsVm { get; } = new();
 
     /// <summary>全局唯一的目标格式:先选格式,再拖文件。</summary>
     [ObservableProperty]
     private FormatInfo selectedFormat = null!;
+
+    /// <summary>当前选中格式的简称(大写扩展名),空态拖放文案用。</summary>
+    public string SelectedFormatText => SelectedFormat.Extension.ToUpper();
 
     /// <summary>当前页面 key(convert/tools/history/settings),驱动导航切换。</summary>
     [ObservableProperty]
@@ -71,13 +85,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ThemeOption selectedTheme = null!;
 
-    /// <summary>拖放区提示文案,跟随选中格式。</summary>
     [ObservableProperty]
-    private string dropHintText = "";
-
-    [ObservableProperty]
-    private string outputDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "格式转换输出");
+    private string outputDirectory = ""; // 初值在构造函数内从设置读取(字段初始化器不触发变更回调)
 
     [ObservableProperty]
     private bool outputToSourceFolder;
@@ -95,6 +104,16 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool videoHardwareAcceleration = true;
 
+    /// <summary>全部成功后自动退出程序(倒计时期间拖入新文件/重试会取消)。</summary>
+    [ObservableProperty]
+    private bool exitAfterConversions;
+
+    /// <summary>自动退出倒计时秒数。</summary>
+    [ObservableProperty]
+    private int exitDelaySeconds = 5;
+
+    public int[] ExitDelayChoices { get; } = { 3, 5, 10 };
+
     [ObservableProperty]
     private bool isConverting;
 
@@ -111,14 +130,14 @@ public partial class MainViewModel : ObservableObject
         System.Windows.Shell.TaskbarItemProgressState.None;
 
     [ObservableProperty]
-    private string statusText = "将文件拖到对应格式磁贴上即可开始转换;或先选格式再点「选择文件」。";
+    private string statusText = "把文件拖到左侧队列区或右侧格式磁贴;先选格式再点「选择文件」亦可。";
 
     [ObservableProperty]
     private string currentSpeed = "";
 
     /// <summary>拖入磁贴时是否先弹确认小窗(「不再提醒」持久化到 %APPDATA%)。</summary>
     [ObservableProperty]
-    private bool askBeforeConvert = SettingsService.LoadDontAskBeforeConvert();
+    private bool askBeforeConvert;
 
     /// <summary>队列中有「等待」文件 → 显示「开始转换」按钮。</summary>
     [ObservableProperty]
@@ -151,14 +170,27 @@ public partial class MainViewModel : ObservableObject
     {
         // 在 UI 线程创建 Progress<T>:回调自动切回 UI 线程
         _progress = new Progress<ProgressInfo>(OnProgress);
-        FormatGroups = BuildFormatGroups();
+        FormatTiles = BuildFormatTiles();
         // 默认选中 MP4(最常用的视频目标格式)
-        var mp4 = FormatGroups.SelectMany(g => g.Tiles).First(t => t.Format.Extension == "mp4");
+        var mp4 = FormatTiles.First(t => t.Format.Extension == "mp4");
         selectedFormat = mp4.Format;
         mp4.SetSelected(true);
-        dropHintText = $"将文件拖拽到此处,将直接转换为 {selectedFormat.Extension.ToUpper()}";
-        // 主题:按持久化偏好初始化(ThemeService 已在 App 启动时应用过一次,这里只同步选项)
-        selectedTheme = ThemeOptions.First(o => o.Key == SettingsService.LoadTheme().ToString());
+        // 从持久化设置载入(直接赋字段,不触发变更回调,避免构造期回写)
+        outputDirectory = _settings.OutputDirectory;
+        outputToSourceFolder = _settings.OutputToSourceFolder;
+        autoRename = _settings.AutoRename;
+        audioBitrateKbps = _settings.AudioBitrateKbps;
+        videoCopyFirst = _settings.VideoCopyFirst;
+        videoHardwareAcceleration = _settings.VideoHardwareAcceleration;
+        exitAfterConversions = _settings.ExitAfterConversions;
+        exitDelaySeconds = _settings.ExitDelaySeconds;
+        askBeforeConvert = _settings.DontAskBeforeConvert;
+        // 主题:按持久化偏好初始化(ThemeService 已在 App 启动时应用过一次,这里只同步选项;
+        // 走属性 setter → 触发 OnSelectedThemeChanged → 应用主题并回写完整 schema/迁移旧设置)
+        var themeKey = string.IsNullOrEmpty(_settings.Theme) ? "System" : _settings.Theme;
+        SelectedTheme = ThemeOptions.First(o =>
+            string.Equals(o.Key, themeKey, StringComparison.OrdinalIgnoreCase));
+        PresetsVm.ActivePresetChanged += ApplyPreset;
         RefreshShellStatus();
         // 命令面板条目(直达各命令)
         PaletteItems = new[]
@@ -174,30 +206,70 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
-    /// <summary>按固定顺序(视频/音频/文档/图片)构建格式分组;纯来源格式(如 pptx)不出磁贴。</summary>
-    private IReadOnlyList<FormatGroupViewModel> BuildFormatGroups()
+    /// <summary>按固定顺序(视频/音频/文档/图片)平铺全部目标格式磁贴;纯来源格式(如 pptx)不出磁贴。</summary>
+    private IReadOnlyList<FormatTileViewModel> BuildFormatTiles()
     {
         var order = new[] { FileCategory.Video, FileCategory.Audio, FileCategory.Document, FileCategory.Image };
-        return order.Select(cat => new FormatGroupViewModel(
-            cat,
-            FormatRegistry.AllFormats.Where(f => f.Category == cat && FormatRegistry.IsTargetFormat(f.Extension)),
-            format => SelectedFormat = format)).ToList();
+        return order.SelectMany(cat =>
+                FormatRegistry.AllFormats.Where(f => f.Category == cat && FormatRegistry.IsTargetFormat(f.Extension)))
+            .Select(f => new FormatTileViewModel(f, format => SelectedFormat = format))
+            .ToList();
     }
+
+    /// <summary>
+    /// 选中预设 → 联动目标格式磁贴 + 把可映射的参数覆盖写入全局高级设置(随全局持久化)。
+    /// CRF/GIF/自定义参数等无全局 UI 的覆盖在入队时按条目快照生效。
+    /// </summary>
+    private void ApplyPreset(ConversionPreset? preset)
+    {
+        if (preset is null) return;
+        var format = FormatRegistry.Find(preset.TargetExtension);
+        if (format is null) return;
+        SelectedFormat = format;
+        if (preset.Options is { } o)
+        {
+            if (o.AudioBitrateKbps is { } k) AudioBitrateKbps = k;
+            if (o.VideoMode is { } vm) VideoCopyFirst = vm == VideoMode.CopyFirst;
+            if (o.HardwareAcceleration is { } hw) VideoHardwareAcceleration = hw;
+        }
+        StatusText = $"已应用预设「{preset.Name}」:目标 {preset.TargetExtension.ToUpper()},后续入队的文件将使用该预设(可映射的参数已写入全局设置)。";
+    }
+
+    /// <summary>取对指定目标格式生效的当前预设(目标不同 → 纯显式目标,不套预设);无预设返回 null。</summary>
+    private ConversionPreset? PresetFor(FormatInfo target)
+    {
+        var preset = PresetsVm.ActivePreset;
+        if (preset is null) return null;
+        return string.Equals(preset.TargetExtension, target.Extension, StringComparison.OrdinalIgnoreCase)
+            ? preset
+            : null;
+    }
+
+    /// <summary>跳转到设置页的预设管理卡片。</summary>
+    [RelayCommand]
+    private void OpenPresetManager() => Navigate(PageSettings);
 
     partial void OnSelectedFormatChanged(FormatInfo value)
     {
-        DropHintText = $"将文件拖拽到此处,将直接转换为 {value.Extension.ToUpper()}";
         // 单选联动:刷新所有磁贴的选中态
-        foreach (var tile in FormatGroups.SelectMany(g => g.Tiles))
+        foreach (var tile in FormatTiles)
             tile.SetSelected(tile.Format == value);
-        // "等待"中的文件:源能转成新格式的跟随切换;不能转的保持原目标(行内标签可见,不打扰)
+        // "等待"中的文件:源能转成新格式的跟随切换;不能转的保持原目标并给出红色「不兼容」提示
         foreach (var item in Files.Where(f => f.Status == "等待"))
         {
             var ext = Path.GetExtension(item.SourcePath).TrimStart('.');
             if (FormatRegistry.GetTargets(ext).Any(t =>
                     string.Equals(t.Extension, value.Extension, StringComparison.OrdinalIgnoreCase)))
+            {
                 item.TargetFormat = value;
+                item.ClearIncompatible();
+            }
+            else
+            {
+                item.SetIncompatible(value);
+            }
         }
+        OnPropertyChanged(nameof(SelectedFormatText));
         RefreshTileCounts();
     }
 
@@ -324,7 +396,75 @@ public partial class MainViewModel : ObservableObject
         if (value is null) return;
         var theme = Enum.Parse<AppTheme>(value.Key);
         ThemeService.Apply(theme);
-        SettingsService.SaveTheme(theme);
+        PersistSettings();
+    }
+
+    // ---------- 设置持久化 ----------
+
+    /// <summary>把当前设置类属性回写到 AppSettingsData 并落盘。</summary>
+    private void PersistSettings()
+    {
+        _settings.OutputDirectory = OutputDirectory;
+        _settings.OutputToSourceFolder = OutputToSourceFolder;
+        _settings.AutoRename = AutoRename;
+        _settings.AudioBitrateKbps = AudioBitrateKbps;
+        _settings.VideoCopyFirst = VideoCopyFirst;
+        _settings.VideoHardwareAcceleration = VideoHardwareAcceleration;
+        _settings.ExitAfterConversions = ExitAfterConversions;
+        _settings.ExitDelaySeconds = ExitDelaySeconds;
+        _settings.DontAskBeforeConvert = AskBeforeConvert;
+        if (SelectedTheme is not null) _settings.Theme = SelectedTheme.Key;
+        SettingsService.Save(_settings);
+    }
+
+    partial void OnOutputDirectoryChanged(string value) => PersistSettings();
+
+    partial void OnOutputToSourceFolderChanged(bool value) => PersistSettings();
+
+    partial void OnAutoRenameChanged(bool value) => PersistSettings();
+
+    partial void OnAudioBitrateKbpsChanged(int value) => PersistSettings();
+
+    partial void OnVideoCopyFirstChanged(bool value) => PersistSettings();
+
+    partial void OnVideoHardwareAccelerationChanged(bool value) => PersistSettings();
+
+    partial void OnExitAfterConversionsChanged(bool value) => PersistSettings();
+
+    partial void OnExitDelaySecondsChanged(int value) => PersistSettings();
+
+    // ---------- 完成后自动退出 ----------
+
+    /// <summary>取消自动退出倒计时(拖入新文件/重试/重新开始转换时调用)。</summary>
+    private void CancelExitCountdown()
+    {
+        _exitTimer?.Stop();
+        _exitTimer = null;
+    }
+
+    /// <summary>全部成功后按设置启动退出倒计时;归零关闭程序。</summary>
+    private void StartExitCountdown()
+    {
+        if (!ExitAfterConversions || ExitDelaySeconds <= 0) return;
+        _exitCountdown = ExitDelaySeconds;
+        CancelExitCountdown();
+        _exitTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1),
+        };
+        _exitTimer.Tick += (_, _) =>
+        {
+            _exitCountdown--;
+            if (_exitCountdown <= 0)
+            {
+                CancelExitCountdown();
+                Application.Current.Shutdown();
+                return;
+            }
+            StatusText = $"全部完成,{_exitCountdown} 秒后自动退出(拖入新文件可取消)";
+        };
+        _exitTimer.Start();
+        StatusText = $"全部完成,{_exitCountdown} 秒后自动退出(拖入新文件可取消)";
     }
 
     // ---------- 右键菜单集成 ----------
@@ -372,13 +512,12 @@ public partial class MainViewModel : ObservableObject
             ShellStatus = "未安装";
     }
 
-    partial void OnAskBeforeConvertChanged(bool value) => SettingsService.SaveDontAskBeforeConvert(value);
+    partial void OnAskBeforeConvertChanged(bool value) => PersistSettings();
 
     partial void OnIsConvertingChanged(bool value)
     {
         StartCommand.NotifyCanExecuteChanged();
         RetryFailedCommand.NotifyCanExecuteChanged();
-        RemoveSelectedCommand.NotifyCanExecuteChanged();
         ClearCommand.NotifyCanExecuteChanged();
         RemoveSelectedFilesCommand.NotifyCanExecuteChanged();
         TaskbarState = value
@@ -428,6 +567,7 @@ public partial class MainViewModel : ObservableObject
         if (IsConverting) return;
         IsConverting = true;
         CurrentSpeed = "";
+        CancelExitCountdown();
         // 转换期间暂停媒体探测,避免与转换争用 ffprobe
         _probeCts?.Cancel();
         _probeCts = null;
@@ -441,15 +581,35 @@ public partial class MainViewModel : ObservableObject
                 var pending = Files.Where(f => f.Status == "等待").ToList();
                 if (pending.Count == 0) break;
 
+                // 批次黑名单:同批次已分配的输出路径,防不同源同名文件互撞
+                var batchBlacklist = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var jobs = new List<ConversionJob>(pending.Count);
-                foreach (var item in pending)
+                var jobItems = new List<FileItemViewModel>(pending.Count);
+                for (var i = 0; i < pending.Count; i++)
                 {
+                    var item = pending[i];
                     item.Status = "转换中";
                     item.Progress = 0;
                     item.Error = null;
-                    var outputPath = OutputPathHelper.Resolve(
-                        item.SourcePath, item.TargetFormat.Extension,
-                        OutputDirectory, OutputToSourceFolder, AutoRename);
+
+                    string outputPath;
+                    try
+                    {
+                        var ctx = new TemplateContext(
+                            item.SourcePath, item.TargetFormat.Extension, i + 1, pending.Count, DateTime.Now);
+                        outputPath = OutputPathResolver.Resolve(
+                            item.SourcePath, item.TargetFormat.Extension, item.OutputTemplate,
+                            OutputDirectory, OutputToSourceFolder, AutoRename, ctx, batchBlacklist);
+                    }
+                    catch (OutputTemplateException ex)
+                    {
+                        // 手改 settings.json 等异常模板:该文件直接失败,不阻塞批次
+                        item.Status = "失败";
+                        item.Error = ex.Message;
+                        continue;
+                    }
+                    batchBlacklist.Add(outputPath);
+
                     var options = new ConversionOptions
                     {
                         AudioBitrateKbps = AudioBitrateKbps,
@@ -457,21 +617,30 @@ public partial class MainViewModel : ObservableObject
                         VideoMode = VideoCopyFirst ? VideoMode.CopyFirst : VideoMode.AlwaysTranscode,
                         HardwareAcceleration = VideoHardwareAcceleration,
                     };
+                    // 预设参数覆盖(CRF/GIF/自定义参数等无全局 UI 的项经此生效)
+                    options = item.OptionsOverride?.ApplyTo(options) ?? options;
                     jobs.Add(new ConversionJob(Guid.NewGuid(), item.SourcePath, outputPath,
-                        item.TargetFormat.Extension, options));
+                        item.TargetFormat.Extension, options, item.PostAction, item.ArchiveFolder));
+                    jobItems.Add(item);
                 }
 
                 var results = await _engine.ConvertAllAsync(jobs, _progress, cts.Token);
 
-                for (var i = 0; i < pending.Count; i++)
+                for (var i = 0; i < jobItems.Count; i++)
                 {
-                    var item = pending[i];
+                    var item = jobItems[i];
                     var result = results[i];
                     if (result.Success)
                     {
                         item.Status = "成功";
                         item.Progress = 100;
                         item.Speed = null;
+                        if (result.PostAction is { } pa)
+                            item.PostActionNote = pa.Detail;
+                        if (result.Note is { } note)
+                            item.PostActionNote = string.IsNullOrEmpty(item.PostActionNote)
+                                ? note
+                                : item.PostActionNote + "; " + note;
                     }
                     else if (result.ErrorMessage == "已取消")
                     {
@@ -518,6 +687,10 @@ public partial class MainViewModel : ObservableObject
         // 完成通知(全取消时不打扰)
         if (ok + fail > 0)
             NotifyService.Show("转换完成", StatusText);
+
+        // 全部成功且无剩余/失败/取消 → 按设置启动自动退出倒计时(拖入新文件会取消)
+        if (ExitAfterConversions && ok > 0 && fail == 0 && cancel == 0 && wait == 0)
+            StartExitCountdown();
     }
 
     private bool CanRetryFailed() => !IsConverting && HasFailedFiles;
@@ -526,6 +699,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanRetryFailed))]
     private async Task RetryFailedAsync()
     {
+        CancelExitCountdown();
         foreach (var item in Files.Where(f => f.Status == "失败").ToList())
         {
             item.Status = "等待";
@@ -545,7 +719,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void RefreshTileCounts()
     {
-        foreach (var tile in FormatGroups.SelectMany(g => g.Tiles))
+        foreach (var tile in FormatTiles)
         {
             tile.PendingCount = Files.Count(f =>
                 f.Status is "等待" or "转换中" &&
@@ -589,19 +763,6 @@ public partial class MainViewModel : ObservableObject
             OutputDirectory = dlg.FolderName;
     }
 
-    [RelayCommand]
-    private void RemoveSelected(object? parameter)
-    {
-        if (IsConverting) return;
-        if (parameter is not System.Collections.IList list || list.Count == 0) return;
-        foreach (var item in list.Cast<FileItemViewModel>().ToArray())
-        {
-            Files.Remove(item);
-            _knownPaths.Remove(item.SourcePath);
-        }
-        RefreshTileCounts();
-    }
-
     /// <summary>移除单个文件(列表行内 ✕ 按钮)。</summary>
     [RelayCommand]
     private void RemoveFile(FileItemViewModel? item)
@@ -620,7 +781,7 @@ public partial class MainViewModel : ObservableObject
         _knownPaths.Clear();
         _overwriteWarnings = 0;
         OverallProgress = 0;
-        StatusText = "将文件拖到对应格式磁贴上即可开始转换;或先选格式再点「选择文件」。";
+        StatusText = "把文件拖到左侧队列区或右侧格式磁贴;先选格式再点「选择文件」亦可。";
         CurrentSpeed = "";
         RefreshTileCounts();
     }
@@ -666,6 +827,7 @@ public partial class MainViewModel : ObservableObject
     public async Task<(int Added, int Rejected)> AddPathsToFormatAsync(
         IEnumerable<string> paths, FormatInfo target, bool autoStart)
     {
+        CancelExitCountdown();
         _overwriteWarnings = 0;
         var rejected = new List<string>();
         var before = Files.Count;
@@ -693,6 +855,7 @@ public partial class MainViewModel : ObservableObject
 
     private void AddPath(string path)
     {
+        CancelExitCountdown();
         if (Directory.Exists(path))
         {
             try
@@ -727,15 +890,18 @@ public partial class MainViewModel : ObservableObject
             var target = targets.Any(t =>
                 string.Equals(t.Extension, SelectedFormat.Extension, StringComparison.OrdinalIgnoreCase))
                 ? SelectedFormat : defaultTarget;
+            // 目标格式与当前预设一致 → 快照预设(模板/后置动作/参数覆盖)
             var item = new FileItemViewModel(
-                path, info.Name, info.Length, category, target);
+                path, info.Name, info.Length, category, target, PresetFor(target));
+            if (!string.Equals(target.Extension, SelectedFormat.Extension, StringComparison.OrdinalIgnoreCase))
+                item.SetIncompatible(SelectedFormat); // 不能转选中格式 → 落了默认目标,红色提示
             Files.Add(item);
             QueueMediaProbe(item);
 
             // 关闭自动重命名时预检:目标已存在将被覆盖,统计并在状态栏提示
             if (!AutoRename)
             {
-                var output = OutputPathHelper.Resolve(
+                var output = OutputPathResolver.ResolveLegacy(
                     path, target.Extension, OutputDirectory, OutputToSourceFolder, AutoRename);
                 if (File.Exists(output) &&
                     !string.Equals(Path.GetFullPath(output), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
@@ -779,6 +945,15 @@ public partial class MainViewModel : ObservableObject
             rejected.Add($"{name}(不支持的格式)");
             return;
         }
+        // 老版二进制 Office:doc 的全部目标与 ppt→txt/pdf 走内置路径(无 LibreOffice 也可);
+        // 仅 ppt→pptx 依赖 LibreOffice
+        if (ext.Equals("ppt", StringComparison.OrdinalIgnoreCase)
+            && target.Extension.Equals("pptx", StringComparison.OrdinalIgnoreCase)
+            && !LibreOfficeLocator.IsAvailable)
+        {
+            rejected.Add($"{name}(转换 PPT→PPTX 需要安装 LibreOffice;转为 TXT/PDF 无需安装)");
+            return;
+        }
         if (!_knownPaths.Add(path)) return; // 去重:静默跳过,不算拒绝
         try
         {
@@ -792,13 +967,17 @@ public partial class MainViewModel : ObservableObject
             }
             var info = new FileInfo(path);
             var item = new FileItemViewModel(
-                path, info.Name, info.Length, FormatRegistry.GetCategory(ext), target);
+                path, info.Name, info.Length, FormatRegistry.GetCategory(ext), target, PresetFor(target));
+            // 显式目标 ≠ 选中格式且不能转选中 → 红色提示(保持显式目标)
+            if (!string.Equals(target.Extension, SelectedFormat.Extension, StringComparison.OrdinalIgnoreCase)
+                && !targets.Any(t => string.Equals(t.Extension, SelectedFormat.Extension, StringComparison.OrdinalIgnoreCase)))
+                item.SetIncompatible(SelectedFormat);
             Files.Add(item);
             QueueMediaProbe(item);
 
             if (!AutoRename)
             {
-                var output = OutputPathHelper.Resolve(
+                var output = OutputPathResolver.ResolveLegacy(
                     path, target.Extension, OutputDirectory, OutputToSourceFolder, AutoRename);
                 if (File.Exists(output) &&
                     !string.Equals(Path.GetFullPath(output), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))

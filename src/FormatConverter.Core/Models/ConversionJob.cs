@@ -8,7 +8,9 @@ public sealed record ConversionJob(
     string SourcePath,
     string OutputPath,
     string TargetExtension,
-    ConversionOptions Options)
+    ConversionOptions Options,
+    PostConversionAction PostConversionAction = PostConversionAction.None,
+    string? ArchiveFolder = null)
 {
     public FileCategory Category => FormatRegistry.GetCategory(SourcePath);
 }

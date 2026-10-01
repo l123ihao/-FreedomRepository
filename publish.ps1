@@ -2,7 +2,7 @@
 # 用法: powershell -ExecutionPolicy Bypass -File publish.ps1
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path $PSScriptRoot -Parent
+$root = $PSScriptRoot
 # 优先用本机固定 SDK;找不到则退回 PATH 里的 dotnet
 $dotnet = "D:\dotnet\dotnet.exe"
 if (-not (Test-Path $dotnet)) { $dotnet = "dotnet" }

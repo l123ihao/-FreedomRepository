@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 真实 .doc/.ppt 测试样本(来自 NPOI Apache-2.0 测试集) -->
+    <None Include="TestFiles\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\FormatConverter.Core\FormatConverter.Core.csproj" />
   </ItemGroup>
 

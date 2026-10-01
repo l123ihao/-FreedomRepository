@@ -1,3 +1,4 @@
+using System.Text;
 using FormatConverter.Core.Models;
 
 namespace FormatConverter.Core.Ffmpeg;
@@ -60,10 +61,51 @@ public static class FfmpegArgsBuilder
         else
             BuildVideoArgs(args, target, options, probe, hardwareEncoder);
 
+        // 自定义参数逃生舱:必须插在 -f <muxer> 之前(用户不得覆盖 muxer 声明)
+        if (!string.IsNullOrWhiteSpace(options.CustomFfmpegArgs))
+            args.AddRange(SplitCustomArgs(options.CustomFfmpegArgs, inputPath, outputPath));
+
         args.Add("-f");
         args.Add(GetMuxer(target));
         args.Add(outputPath);
         return args;
+    }
+
+    /// <summary>
+    /// 自定义参数切分:按空白切分、支持双引号包裹;{input}/{output} 替换为实际路径
+    /// ({output} 即 .part 半成品路径,契合 runner 的原子改名约定)。
+    /// </summary>
+    public static IReadOnlyList<string> SplitCustomArgs(string custom, string inputPath, string outputPath)
+    {
+        var tokens = new List<string>();
+        var sb = new StringBuilder();
+        var inQuotes = false;
+        foreach (var c in custom)
+        {
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+            if (!inQuotes && char.IsWhiteSpace(c))
+            {
+                Flush(tokens, sb);
+                continue;
+            }
+            sb.Append(c);
+        }
+        Flush(tokens, sb);
+
+        return tokens
+            .Select(t => t.Replace("{input}", inputPath).Replace("{output}", outputPath))
+            .ToList();
+
+        static void Flush(List<string> list, StringBuilder builder)
+        {
+            if (builder.Length == 0) return;
+            list.Add(builder.ToString());
+            builder.Clear();
+        }
     }
 
     // ---------- 音频 ----------

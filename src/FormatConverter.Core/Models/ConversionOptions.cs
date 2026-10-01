@@ -41,4 +41,7 @@ public sealed class ConversionOptions
 
     /// <summary>视频转码时优先使用硬件编码器(NVENC/QSV/AMF),失败自动回退软件编码。</summary>
     public bool HardwareAcceleration { get; init; } = true;
+
+    /// <summary>FFmpeg 自定义参数(预设逃生舱;按空白/双引号切分,{input}/{output} 占位符)。</summary>
+    public string? CustomFfmpegArgs { get; init; }
 }

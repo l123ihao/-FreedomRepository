@@ -1,6 +1,9 @@
 using System.Text;
+using FormatConverter.Core.Converters;
 using FormatConverter.Core.Documents;
 using FormatConverter.Core.Markdown;
+using FormatConverter.Core.Models;
+using FormatConverter.Core.Pdf;
 
 namespace FormatConverter.Core.Tests;
 
@@ -29,6 +32,38 @@ public class DocumentConversionTests : IDisposable
         var back = ModelToTxt.Convert(read);
         Assert.Contains("第一行内容", back);
         Assert.Contains("第二行内容。", back);
+    }
+
+    [Fact]
+    public async Task Pdf_To_Docx_Preserves_Text()
+    {
+        // 先用内置渲染器生成真实 PDF(含中文),再走 DocumentConverter 转 docx 并读回验证
+        var pdf = PathIn("源.pdf");
+        PdfRenderer.Render(TextToModel.Convert("PDF 转 Word 测试"), pdf);
+        Assert.True(File.Exists(pdf));
+
+        var docx = PathIn("out.docx");
+        var job = new ConversionJob(Guid.NewGuid(), pdf, docx, "docx", new ConversionOptions());
+        var result = await new DocumentConverter().ConvertAsync(job, null, CancellationToken.None);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        var back = ModelToTxt.Convert(DocxReader.Read(docx));
+        Assert.Contains("PDF 转 Word 测试", back);
+    }
+
+    [Fact]
+    public async Task Pdf_To_Html_Produces_Text_Html()
+    {
+        var pdf = PathIn("源2.pdf");
+        PdfRenderer.Render(TextToModel.Convert("HTML 转换测试"), pdf);
+
+        var html = PathIn("out.html");
+        var job = new ConversionJob(Guid.NewGuid(), pdf, html, "html", new ConversionOptions());
+        var result = await new DocumentConverter().ConvertAsync(job, null, CancellationToken.None);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        var content = TextFile.ReadAllText(html);
+        Assert.Contains("HTML 转换测试", content);
     }
 
     [Fact]
