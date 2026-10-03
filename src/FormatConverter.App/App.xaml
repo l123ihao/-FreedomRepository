@@ -1,6 +1,7 @@
 <Application x:Class="FormatConverter.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:FormatConverter.Core.Models;assembly=FormatConverter.Core">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -127,7 +128,7 @@
                 </Setter>
             </Style>
 
-            <!-- 格式磁贴(同时是投放区):单选,选中 = 蓝底白字;悬停拖放 = 蓝边;拒绝 = 红边 -->
+            <!-- 格式磁贴(同时是投放区):单选;未选中 = 类别色边框+文字,选中 = 类别色实底白字;悬停拖放 = 蓝边浅蓝底;拒绝 = 红边 -->
             <Style x:Key="FormatTile" TargetType="ToggleButton">
                 <Setter Property="Height" Value="28"/>
                 <Setter Property="MinWidth" Value="56"/>
@@ -149,23 +150,47 @@
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
+                                <!-- 悬停:中性浅底(边框/文字保持类别色) -->
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource TileHoverBrush}"/>
-                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
                                 </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    <Setter Property="Foreground" Value="White"/>
-                                </Trigger>
-                                <MultiTrigger>
-                                    <MultiTrigger.Conditions>
+                                <!-- 选中:类别色实底 + 白字(放在悬停之后,优先级更高) -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
                                         <Condition Property="IsChecked" Value="True"/>
-                                        <Condition Property="IsMouseOver" Value="True"/>
-                                    </MultiTrigger.Conditions>
-                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
-                                </MultiTrigger>
+                                        <Condition Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Video}"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource FormatVideoBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource FormatVideoBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </MultiDataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                        <Condition Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Audio}"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource FormatAudioBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource FormatAudioBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </MultiDataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                        <Condition Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Document}"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource FormatDocumentBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource FormatDocumentBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </MultiDataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                        <Condition Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Image}"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource FormatImageBrush}"/>
+                                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource FormatImageBrush}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </MultiDataTrigger>
                                 <!-- 拖放悬停:蓝边浅蓝底 -->
                                 <DataTrigger Binding="{Binding IsDragOver}" Value="True">
                                     <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentLightBrush}"/>
@@ -186,6 +211,25 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+                <Style.Triggers>
+                    <!-- 未选中:按格式类别着色边框与文字 -->
+                    <DataTrigger Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Video}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource FormatVideoBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource FormatVideoBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Audio}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource FormatAudioBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource FormatAudioBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Document}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource FormatDocumentBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource FormatDocumentBrush}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Format.Category}" Value="{x:Static models:FileCategory.Image}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource FormatImageBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource FormatImageBrush}"/>
+                    </DataTrigger>
+                </Style.Triggers>
             </Style>
 
             <!-- 预设条:矮版磁贴 -->

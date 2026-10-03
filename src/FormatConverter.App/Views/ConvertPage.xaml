@@ -276,7 +276,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 目标格式:紧凑网格,右下角类别色点 -->
+                <!-- 目标格式:紧凑网格,磁贴按类别着色(选中 = 类别色实底) -->
                 <Border Style="{StaticResource CardStyle}" Padding="14,10" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="目标格式 — 点选磁贴,或直接把文件拖到磁贴上" FontSize="12"
@@ -300,33 +300,6 @@
                                         <Grid IsHitTestVisible="False">
                                             <TextBlock Text="{Binding ExtensionText}" FontSize="12" FontWeight="Bold"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            <!-- 类别色点 -->
-                                            <Ellipse Width="6" Height="6" HorizontalAlignment="Right"
-                                                     VerticalAlignment="Bottom" Margin="0,0,3,3">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="Transparent"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Format.Category}"
-                                                                         Value="{x:Static models:FileCategory.Video}">
-                                                                <Setter Property="Fill" Value="{DynamicResource FormatVideoBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Format.Category}"
-                                                                         Value="{x:Static models:FileCategory.Audio}">
-                                                                <Setter Property="Fill" Value="{DynamicResource FormatAudioBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Format.Category}"
-                                                                         Value="{x:Static models:FileCategory.Document}">
-                                                                <Setter Property="Fill" Value="{DynamicResource FormatDocumentBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Format.Category}"
-                                                                         Value="{x:Static models:FileCategory.Image}">
-                                                                <Setter Property="Fill" Value="{DynamicResource FormatImageBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
                                             <!-- 红色角标:该格式下 等待/转换中 的文件数 -->
                                             <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                                                     MinWidth="16" Height="16" CornerRadius="8"
