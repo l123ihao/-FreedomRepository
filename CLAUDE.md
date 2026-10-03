@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> 本仓库已有详尽项目笔记 **AGENTS.md**(架构、关键约定与坑、里程碑状态),每次会话自动加载,细节以它为准。本文件只补充 AGENTS.md 未覆盖的操作性信息,不重复其内容。
+> 本仓库已有详尽项目笔记 **AGENTS.md**(架构、关键约定与坑、里程碑状态),通过下方导入自动加载,细节以它为准。本文件只补充 AGENTS.md 未覆盖的操作性信息,不重复其内容。
+
+@AGENTS.md
 
 ## 技术栈速览
 
@@ -34,14 +36,15 @@ powershell -ExecutionPolicy Bypass -File publish.ps1
 
 # 开发运行 / 命令行静默转换(右键菜单调用;退出码 0/1)
 dotnet run --project src/FormatConverter.App -c Release
-FormatConverter.exe --convert mp3 "文件.mp4"   # 输出到源目录,重名自动加序号
+FormatConverter.exe --convert mp3 "文件.mp4"             # 输出目录/重名策略/参数跟随持久化设置
+FormatConverter.exe --preset "高清 MP4(视频)" "文件.mkv"  # 按预设:模板命名+参数覆盖+转换后动作
 ```
 
 CI:`.github/workflows/build.yml`(windows-latest → fetch-ffmpeg → restore → build → test)。
 
 ## 架构一句话(详见 AGENTS.md §2)
 
-`FormatRegistry`(32 种格式 + 转换矩阵,唯一格式真相)→ `ConverterFactory.GetConverter(job)` → 各 `IConverter`(视频/音频走 `FfmpegConverterBase`,图片走 ImageSharp,文档走 OpenXml+QuestPDF+PdfPig+Markdig)→ `ConversionEngine.ConvertAllAsync`(smartParallelism:媒体串行、图片/文档并行)。App 侧 MVVM:`MainWindow` 导航壳 + `Views/`(Convert/Tools/Settings/History)+ `ViewModels/`,主题色全部 `DynamicResource`(`Themes/Light.xaml` + `Dark.xaml` 成对维护)。
+`FormatRegistry`(35 种格式 + 转换矩阵,唯一格式真相)→ `ConverterFactory.GetConverter(job)` → 各 `IConverter`(视频/音频走 `FfmpegConverterBase`,图片走 ImageSharp,文档走 OpenXml+QuestPDF+PdfPig+Markdig)→ `ConversionEngine.ConvertAllAsync`(smartParallelism:媒体串行、图片/文档并行)。App 侧 MVVM:`MainWindow` 导航壳 + `Views/`(Convert/Tools/Settings/History)+ `ViewModels/`,主题色全部 `DynamicResource`(`Themes/Light.xaml` + `Dark.xaml` 成对维护)。
 
 ## 高频改动检查单(完整踩坑清单见 AGENTS.md §4)
 

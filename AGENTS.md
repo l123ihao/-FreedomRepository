@@ -15,7 +15,7 @@ Windows 桌面应用：视频/音频/文档/图片格式互转。**C# WPF (.NET 
 ```
 src/
 ├── FormatConverter.Core/            # 无 UI 依赖的转换内核
-│   ├── Formats/FormatRegistry.cs    # ★格式注册表:33 种格式 + 转换矩阵(唯一的格式真相)
+│   ├── Formats/FormatRegistry.cs    # ★格式注册表:35 种格式 + 转换矩阵(唯一的格式真相)
 │   ├── Converters/                  # 转换器(ConverterFactory 路由)
 │   │   ├── FfmpegConverterBase.cs   # 视频/音频基类:probe→参数→运行→校验,硬件失败回退软件
 │   │   ├── FfmpegVideoConverter / FfmpegAudioConverter
@@ -35,7 +35,7 @@ src/
 │   ├── ViewModels/                  # MainViewModel(队列/导航/主题/右键菜单) + ToolsViewModel(13 个工具)
 │   ├── Services/                    # ThemeService/SettingsService/MediaProbeService/ShellIntegration/CommandLineConverter/NotifyService/OutputPathHelper
 │   └── Themes/Light.xaml + Dark.xaml  # 25 个语义色 brush(全部 DynamicResource 引用)
-└── Tests/FormatConverter.Core.Tests/  # xUnit,92 项(含 ffmpeg 集成测试,检测不到 ffmpeg 自动跳过)
+└── Tests/FormatConverter.Core.Tests/  # xUnit,184 项(含 ffmpeg 集成测试,检测不到 ffmpeg 自动跳过)
 ```
 
 **数据流**：`FormatRegistry`（格式矩阵）→ `ConverterFactory.GetConverter(job)` 路由 → `ConversionEngine.ConvertAllAsync` 分批并行 → 各 `IConverter`。
@@ -76,7 +76,7 @@ FormatConverter.exe --preset "高清 MP4(视频)" "文件.mkv"  # 按预设:模�
 
 ## 5. 已实现功能（M1–M6 全部完成）
 
-- **转换**：33 种格式矩阵互转；拖拽到格式磁贴；批量队列（虚拟化 ListView）；进度/速度/取消；行内媒体信息（时长/分辨率/编码/码率）。
+- **转换**：35 种格式矩阵互转；拖拽到格式磁贴；批量队列（虚拟化 ListView）；进度/速度/取消；行内媒体信息（时长/分辨率/编码/码率）。
 - **UI**：深色/浅色/跟随系统主题；侧边导航四页（148px 窄栏）；转换页双栏布局（左文件队列+拖放空态/右预设+32 磁贴紧凑网格 4 列+输出设置，1200×720 一屏见全）；4 类别色点（视频蓝/音频紫/文档橙/图片绿，主题双写）；队列「不兼容」红标；快捷键（Ctrl+O / Ctrl+Shift+O / Del / Ctrl+K 命令面板 / Ctrl+1..4）；任务栏进度；完成托盘通知。
 - **预设系统（M6）**：预设 = 目标格式 + 参数覆盖 + 文件名模板 + 转换后动作;内置 5 个 + 用户可增删改排序（设置页「预设」卡片 + 转换页预设条 + 编辑对话框);右键菜单列出预设子命令。
 - **设置与后置动作（M6）**：设置全量持久化（输出目录/码率/硬件加速/自动退出等,旧 2 字段 JSON 无损迁移);文件名模板引擎（File Converter 同款语法）;转换后动作（删除原文件/移入归档,Core 引擎层执行,GUI/CLI 共用）;完成后自动退出倒计时。
